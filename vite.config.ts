@@ -12,7 +12,7 @@ export default defineConfig({
         injectRegister: null,
         filename: "sw.js",
         strategies: "generateSW",
-        includeAssets: ["favicon.ico", "offline.html", "manifest.webmanifest", "icons/icon-192.png", "icons/icon-512.png", "icons/apple-touch-icon.png"],
+        includeAssets: ["favicon.ico", "manifest.webmanifest", "icons/icon-192.png", "icons/icon-512.png", "icons/apple-touch-icon.png"],
         devOptions: { enabled: false },
         manifest: false,
         workbox: {
@@ -20,7 +20,8 @@ export default defineConfig({
           clientsClaim: true,
           skipWaiting: true,
           globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2,webmanifest}"],
-          navigateFallback: "/offline.html",
+          additionalManifestEntries: [{ url: "/", revision: `${Date.now()}` }],
+          navigateFallback: "/",
           navigateFallbackDenylist: [/^\/api/, /^\/~oauth/, /^\/__l5e/],
           runtimeCaching: [
             {
@@ -28,16 +29,25 @@ export default defineConfig({
               handler: "NetworkFirst",
               options: {
                 cacheName: "tillpoint-pages",
-                networkTimeoutSeconds: 4,
-                expiration: { maxEntries: 40, maxAgeSeconds: 60 * 60 * 24 * 7 },
+                networkTimeoutSeconds: 3,
+                expiration: { maxEntries: 60, maxAgeSeconds: 60 * 60 * 24 * 30 },
+                matchOptions: { ignoreSearch: true },
               },
             },
             {
-              urlPattern: ({ url }) => url.pathname.startsWith("/__l5e/") || url.pathname.startsWith("/assets/"),
+              urlPattern: ({ url }) => url.pathname.startsWith("/__l5e/") || url.pathname.startsWith("/assets/") || url.pathname.startsWith("/_build/"),
               handler: "CacheFirst",
               options: {
                 cacheName: "tillpoint-static",
-                expiration: { maxEntries: 200, maxAgeSeconds: 60 * 60 * 24 * 30 },
+                expiration: { maxEntries: 300, maxAgeSeconds: 60 * 60 * 24 * 60 },
+              },
+            },
+            {
+              urlPattern: ({ url }) => url.pathname.startsWith("/icons/") || url.pathname === "/favicon.ico" || url.pathname === "/manifest.webmanifest",
+              handler: "CacheFirst",
+              options: {
+                cacheName: "tillpoint-icons",
+                expiration: { maxEntries: 50, maxAgeSeconds: 60 * 60 * 24 * 365 },
               },
             },
             {
@@ -46,6 +56,16 @@ export default defineConfig({
               options: {
                 cacheName: "tillpoint-fonts",
                 expiration: { maxEntries: 30, maxAgeSeconds: 60 * 60 * 24 * 365 },
+              },
+            },
+            {
+              urlPattern: ({ url }) => /\.(?:supabase\.co)$/.test(url.hostname) && url.pathname.startsWith("/rest/"),
+              handler: "NetworkFirst",
+              options: {
+                cacheName: "tillpoint-api",
+                networkTimeoutSeconds: 3,
+                expiration: { maxEntries: 100, maxAgeSeconds: 60 * 60 * 24 * 7 },
+                cacheableResponse: { statuses: [0, 200] },
               },
             },
           ],
