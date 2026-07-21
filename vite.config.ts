@@ -20,6 +20,7 @@ export default defineConfig({
           clientsClaim: true,
           skipWaiting: true,
           globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2,webmanifest}"],
+          additionalManifestEntries: [{ url: "/", revision: `${Date.now()}` }],
           navigateFallback: "/",
           navigateFallbackDenylist: [/^\/api/, /^\/~oauth/, /^\/__l5e/],
           runtimeCaching: [
