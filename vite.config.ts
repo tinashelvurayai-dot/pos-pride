@@ -12,15 +12,15 @@ export default defineConfig({
         injectRegister: null,
         filename: "sw.js",
         strategies: "generateSW",
-        includeAssets: ["favicon.ico", "icons/icon-192.png", "icons/icon-512.png", "icons/apple-touch-icon.png"],
+        includeAssets: ["favicon.ico", "offline.html", "manifest.webmanifest", "icons/icon-192.png", "icons/icon-512.png", "icons/apple-touch-icon.png"],
         devOptions: { enabled: false },
         manifest: false,
         workbox: {
           cleanupOutdatedCaches: true,
           clientsClaim: true,
           skipWaiting: true,
-          globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
-          navigateFallback: "/",
+          globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2,webmanifest}"],
+          navigateFallback: "/offline.html",
           navigateFallbackDenylist: [/^\/api/, /^\/~oauth/, /^\/__l5e/],
           runtimeCaching: [
             {
