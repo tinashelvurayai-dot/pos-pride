@@ -82,6 +82,8 @@ function ManagerDashboard() {
         <p className="mt-1 text-sm text-muted-foreground">Live snapshot of your shop.</p>
       </header>
 
+      <SystemPriceBanner />
+
       <section className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {cards.map((c) => (
           <Card key={c.label} className="p-5">
