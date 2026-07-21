@@ -3,11 +3,43 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { formatCurrency, formatDate } from "@/lib/format";
-import { DollarSign, ShoppingBag, Package, AlertTriangle } from "lucide-react";
+import { DollarSign, ShoppingBag, Package, AlertTriangle, Sparkles, BadgePercent } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/manager/")({
   component: ManagerDashboard,
 });
+
+function SystemPriceBanner() {
+  const original = 370;
+  const current = 170;
+  const savings = original - current;
+  const pct = Math.round((savings / original) * 100);
+  return (
+    <section className="mb-8 overflow-hidden rounded-2xl border border-primary/30 bg-gradient-to-br from-blue-600 via-indigo-600 to-fuchsia-600 p-6 text-white shadow-[var(--shadow-elev-2)] md:p-8">
+      <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+        <div className="flex-1">
+          <div className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1 text-xs font-semibold uppercase tracking-wider backdrop-blur">
+            <Sparkles className="h-3.5 w-3.5" /> Limited-time offer
+          </div>
+          <h2 className="mt-3 text-2xl font-bold md:text-3xl">System Price</h2>
+          <p className="mt-1 max-w-xl text-sm text-white/80">
+            Full TillPoint Retail OS — variant inventory, dual-role dashboards, offline till, live analytics, AI forecasting and more. One-time price.
+          </p>
+        </div>
+        <div className="flex flex-col items-start gap-2 md:items-end">
+          <div className="flex items-baseline gap-3">
+            <span className="text-lg font-medium text-white/60 line-through">${original}</span>
+            <span className="text-5xl font-extrabold tracking-tight">${current}</span>
+            <span className="text-sm font-semibold text-white/80">USD</span>
+          </div>
+          <div className="inline-flex items-center gap-1.5 rounded-full bg-emerald-400/90 px-3 py-1 text-xs font-bold uppercase text-emerald-950">
+            <BadgePercent className="h-3.5 w-3.5" /> Save ${savings} · {pct}% off
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
 
 function ManagerDashboard() {
   const stats = useQuery({
@@ -49,6 +81,8 @@ function ManagerDashboard() {
         <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
         <p className="mt-1 text-sm text-muted-foreground">Live snapshot of your shop.</p>
       </header>
+
+      <SystemPriceBanner />
 
       <section className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {cards.map((c) => (

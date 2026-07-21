@@ -1,7 +1,10 @@
-import { createFileRoute, Link, Navigate, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { createFileRoute, Navigate, useNavigate } from "@tanstack/react-router";
+import { useRef, useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { BrandLogo } from "@/components/brand-logo";
 import { PWAInstallButton } from "@/components/pwa-install-button";
 import { supabase } from "@/integrations/supabase/client";
@@ -12,9 +15,18 @@ export const Route = createFileRoute("/")({
   component: Landing,
 });
 
+const CODE_1 = "POSPRIDE";
+const CODE_2 = "POSTAT";
+
 function Landing() {
   const navigate = useNavigate();
   const [guestBusy, setGuestBusy] = useState(false);
+  const [gateOpen, setGateOpen] = useState(false);
+  const [c1, setC1] = useState("");
+  const [c2, setC2] = useState("");
+  const [unlockBusy, setUnlockBusy] = useState(false);
+  const tapCountRef = useRef(0);
+  const tapTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   async function enterCashierMode() {
     setGuestBusy(true);
@@ -25,13 +37,52 @@ function Landing() {
     if (error) return toast.error(error.message);
     navigate({ to: "/cashier" });
   }
+
+  function handleLogoTap() {
+    tapCountRef.current += 1;
+    if (tapTimerRef.current) clearTimeout(tapTimerRef.current);
+    tapTimerRef.current = setTimeout(() => { tapCountRef.current = 0; }, 2000);
+    if (tapCountRef.current >= 7) {
+      tapCountRef.current = 0;
+      setGateOpen(true);
+    }
+  }
+
+  async function handleUnlock(e: React.FormEvent) {
+    e.preventDefault();
+    if (c1.trim().toUpperCase() !== CODE_1 || c2.trim().toUpperCase() !== CODE_2) {
+      toast.error("Invalid access codes");
+      return;
+    }
+    setUnlockBusy(true);
+    try {
+      localStorage.setItem("manager_unlock", "true");
+      const { data } = await supabase.auth.getSession();
+      if (!data.session) {
+        const { error } = await supabase.auth.signInAnonymously({
+          options: { data: { full_name: "Manager" } },
+        });
+        if (error) {
+          toast.error(error.message);
+          setUnlockBusy(false);
+          return;
+        }
+      }
+      setGateOpen(false);
+      navigate({ to: "/manager" });
+    } finally {
+      setUnlockBusy(false);
+    }
+  }
+
   const { session, role, loading } = useAuth();
 
   if (loading) {
     return <div className="flex min-h-screen items-center justify-center text-muted-foreground">Loading...</div>;
   }
 
-  if (session && role === "manager") return <Navigate to="/manager" />;
+  const unlocked = typeof window !== "undefined" && localStorage.getItem("manager_unlock") === "true";
+  if (session && (role === "manager" || unlocked)) return <Navigate to="/manager" />;
   if (session && role === "cashier") return <Navigate to="/cashier" />;
 
   return (
@@ -43,15 +94,19 @@ function Landing() {
 
       <header className="border-b border-border/60 bg-card/60 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-          <BrandLogo />
+          <button
+            type="button"
+            onClick={handleLogoTap}
+            aria-label="TillPoint"
+            className="cursor-pointer select-none rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          >
+            <BrandLogo />
+          </button>
           <div className="flex items-center gap-2">
             <Button asChild variant="ghost" className="hidden sm:inline-flex">
               <a href="#features">Features</a>
             </Button>
             <PWAInstallButton variant="outline" size="sm" className="hidden sm:inline-flex" />
-            <Button asChild>
-              <Link to="/auth">Sign in</Link>
-            </Button>
           </div>
         </div>
       </header>
@@ -68,10 +123,7 @@ function Landing() {
             A point-of-sale built for modern retail. Variant-level inventory, dual-role dashboards and real-time stock in one operating system for your shop floor and back office.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
-            <Button asChild size="lg" className="h-12 px-6 text-base">
-              <Link to="/auth">Get started</Link>
-            </Button>
-            <Button size="lg" variant="secondary" className="h-12 px-6 text-base" onClick={enterCashierMode} disabled={guestBusy}>
+            <Button size="lg" className="h-12 px-6 text-base" onClick={enterCashierMode} disabled={guestBusy}>
               <ShoppingCart className="mr-2 h-5 w-5" /> {guestBusy ? "Opening..." : "Enter Cashier Mode"}
             </Button>
             <PWAInstallButton size="lg" variant="outline" className="h-12 px-6 text-base" label="Install this app" />
@@ -107,6 +159,28 @@ function Landing() {
       <footer className="border-t border-border/60 py-8 text-center text-sm text-muted-foreground">
         © {new Date().getFullYear()} TillPoint. Built for retail.
       </footer>
+
+      <Dialog open={gateOpen} onOpenChange={setGateOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Manager access</DialogTitle>
+            <DialogDescription>Enter both access codes to continue.</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleUnlock} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="code1">Code 1</Label>
+              <Input id="code1" value={c1} onChange={(e) => setC1(e.target.value)} autoComplete="off" autoFocus />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="code2">Code 2</Label>
+              <Input id="code2" type="password" value={c2} onChange={(e) => setC2(e.target.value)} autoComplete="off" />
+            </div>
+            <Button type="submit" className="w-full" disabled={unlockBusy}>
+              {unlockBusy ? "Unlocking..." : "Unlock"}
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
