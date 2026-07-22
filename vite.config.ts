@@ -25,16 +25,6 @@ export default defineConfig({
           navigateFallbackDenylist: [/^\/api/, /^\/~oauth/, /^\/__l5e/],
           runtimeCaching: [
             {
-              urlPattern: ({ request }) => request.mode === "navigate",
-              handler: "NetworkFirst",
-              options: {
-                cacheName: "tillpoint-pages",
-                networkTimeoutSeconds: 3,
-                expiration: { maxEntries: 60, maxAgeSeconds: 60 * 60 * 24 * 30 },
-                matchOptions: { ignoreSearch: true },
-              },
-            },
-            {
               urlPattern: ({ url }) => url.pathname.startsWith("/__l5e/") || url.pathname.startsWith("/assets/") || url.pathname.startsWith("/_build/"),
               handler: "CacheFirst",
               options: {
