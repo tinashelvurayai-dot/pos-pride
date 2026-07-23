@@ -49,7 +49,16 @@ export default defineConfig({
               },
             },
             {
-              urlPattern: ({ url }) => /\.(?:supabase\.co)$/.test(url.hostname) && url.pathname.startsWith("/rest/"),
+              urlPattern: ({ request }) => request.destination === "image",
+              handler: "StaleWhileRevalidate",
+              options: {
+                cacheName: "tillpoint-images",
+                expiration: { maxEntries: 200, maxAgeSeconds: 60 * 60 * 24 * 30 },
+                cacheableResponse: { statuses: [0, 200] },
+              },
+            },
+            {
+              urlPattern: ({ url }) => /\.supabase\.co$/.test(url.hostname) && url.pathname.startsWith("/rest/"),
               handler: "NetworkFirst",
               options: {
                 cacheName: "tillpoint-api",
