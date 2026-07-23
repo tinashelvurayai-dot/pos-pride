@@ -6,13 +6,15 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { Toaster } from "@/components/ui/sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { registerPWA } from "@/lib/pwa-register";
+import { PWAStatus } from "@/components/pwa-status";
+import { flushQueue } from "@/lib/offline-queue";
 
 function NotFoundComponent() {
   return (
@@ -90,15 +92,21 @@ function RootShell({ children }: { children: ReactNode }) {
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   const router = useRouter();
+  const [reload, setReload] = useState<(() => void) | null>(null);
 
   useEffect(() => {
-    registerPWA();
+    registerPWA((doReload) => setReload(() => doReload));
+    const onOnline = () => { void flushQueue(); };
+    window.addEventListener("online", onOnline);
     const { data: sub } = supabase.auth.onAuthStateChange((event) => {
       if (event !== "SIGNED_IN" && event !== "SIGNED_OUT" && event !== "USER_UPDATED") return;
       router.invalidate();
       if (event !== "SIGNED_OUT") queryClient.invalidateQueries();
     });
-    return () => sub.subscription.unsubscribe();
+    return () => {
+      window.removeEventListener("online", onOnline);
+      sub.subscription.unsubscribe();
+    };
   }, [router, queryClient]);
 
   return (
@@ -106,8 +114,8 @@ function RootComponent() {
       <div className="page-frame">
         <Outlet />
       </div>
+      <PWAStatus reload={reload} />
       <Toaster richColors position="top-right" />
     </QueryClientProvider>
   );
-
 }
