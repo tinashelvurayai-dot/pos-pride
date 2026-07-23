@@ -1,4 +1,4 @@
-// Guarded service worker registration for cashier offline support.
+// Guarded service worker registration for offline support.
 // Never registers in Lovable preview/dev/iframe contexts.
 
 function isPreviewOrDev(): boolean {
@@ -11,8 +11,8 @@ function isPreviewOrDev(): boolean {
     if (h === "lovableproject.com" || h.endsWith(".lovableproject.com")) return true;
     if (h === "lovableproject-dev.com" || h.endsWith(".lovableproject-dev.com")) return true;
     if (h === "beta.lovable.dev" || h.endsWith(".beta.lovable.dev")) return true;
-    if (new URLSearchParams(window.location.search).has("sw") &&
-        new URLSearchParams(window.location.search).get("sw") === "off") return true;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("sw") === "off") return true;
   } catch { /* noop */ }
   return false;
 }
@@ -28,7 +28,7 @@ async function unregisterAppSW() {
   } catch { /* noop */ }
 }
 
-export function registerPWA() {
+export function registerPWA(onUpdate?: (reload: () => void) => void) {
   if (typeof window === "undefined") return;
   if (isPreviewOrDev()) {
     void unregisterAppSW();
@@ -36,6 +36,25 @@ export function registerPWA() {
   }
   if (!("serviceWorker" in navigator)) return;
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("/sw.js").catch(() => { /* noop */ });
+    navigator.serviceWorker.register("/sw.js").then((reg) => {
+      function watch(worker: ServiceWorker | null) {
+        if (!worker) return;
+        worker.addEventListener("statechange", () => {
+          if (worker.state === "installed" && navigator.serviceWorker.controller && onUpdate) {
+            onUpdate(() => {
+              worker.postMessage({ type: "SKIP_WAITING" });
+              window.location.reload();
+            });
+          }
+        });
+      }
+      if (reg.waiting && navigator.serviceWorker.controller && onUpdate) {
+        onUpdate(() => {
+          reg.waiting?.postMessage({ type: "SKIP_WAITING" });
+          window.location.reload();
+        });
+      }
+      reg.addEventListener("updatefound", () => watch(reg.installing));
+    }).catch(() => { /* noop */ });
   });
 }
