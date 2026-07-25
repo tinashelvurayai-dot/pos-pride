@@ -394,6 +394,38 @@ function ProductsPage() {
           )}
         </DialogContent>
       </Dialog>
+
+      <Dialog open={!!editingProduct} onOpenChange={(o) => { if (!o) { setEditingProduct(null); setEditImage(""); } }}>
+        <DialogContent className="max-h-[90vh] overflow-auto">
+          <DialogHeader><DialogTitle>Edit product</DialogTitle></DialogHeader>
+          {editingProduct && (
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                const fd = new FormData(e.currentTarget);
+                updateProduct.mutate({
+                  id: editingProduct.id,
+                  name: String(fd.get("name") ?? "").trim(),
+                  description: String(fd.get("description") ?? ""),
+                  category: String(fd.get("category") ?? ""),
+                  base_price: parseFloat(String(fd.get("base_price") ?? "0")) || 0,
+                  image_url: editImage,
+                });
+              }}
+              className="space-y-4"
+            >
+              <ProductImagePicker value={editImage} onChange={setEditImage} />
+              <div className="space-y-2"><Label>Name</Label><Input name="name" required maxLength={100} defaultValue={editingProduct.name} /></div>
+              <div className="space-y-2"><Label>Category</Label><Input name="category" maxLength={60} defaultValue={editingProduct.category ?? ""} /></div>
+              <div className="space-y-2"><Label>Base price (optional)</Label><Input name="base_price" type="number" step="0.01" min="0" defaultValue={editingProduct.base_price ?? ""} /></div>
+              <div className="space-y-2"><Label>Description</Label><Textarea name="description" rows={3} maxLength={500} defaultValue={editingProduct.description ?? ""} /></div>
+              <DialogFooter>
+                <Button type="submit" disabled={updateProduct.isPending}>Save changes</Button>
+              </DialogFooter>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
