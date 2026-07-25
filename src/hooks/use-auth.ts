@@ -34,14 +34,20 @@ export function useAuth(): AuthState {
         setLoading(false);
         return;
       }
-      const [{ data: p }, { data: r }] = await Promise.all([
-        supabase.from("profiles").select("id, full_name, cashier_id, active").eq("id", s.user.id).maybeSingle(),
-        supabase.from("user_roles").select("role").eq("user_id", s.user.id).maybeSingle(),
-      ]);
-      if (cancelled) return;
-      setProfile(p as AuthProfile | null);
-      setRole((r?.role as AppRole) ?? null);
-      setLoading(false);
+      try {
+        const [{ data: p }, { data: r }] = await Promise.all([
+          supabase.from("profiles").select("id, full_name, cashier_id, active").eq("id", s.user.id).maybeSingle(),
+          supabase.from("user_roles").select("role").eq("user_id", s.user.id).maybeSingle(),
+        ]);
+        if (cancelled) return;
+        setProfile(p as AuthProfile | null);
+        setRole((r?.role as AppRole) ?? null);
+      } catch {
+        // Offline or transient failure — resolve loading so gated routes render.
+        if (cancelled) return;
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
     }
 
     supabase.auth.getSession().then(({ data }) => {
