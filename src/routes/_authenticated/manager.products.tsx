@@ -152,7 +152,7 @@ function ProductsPage() {
     setEditingProduct(p);
     setEditImage(p.image_url ?? "");
   }
-
+  const createVariant = useMutation({
     mutationFn: async (input: { product_id: string; variant_name: string; size: string; flavour: string; price: number; sku: string; initial_qty: number }) => {
       const { data, error } = await supabase.from("product_variants").insert({
         product_id: input.product_id,
