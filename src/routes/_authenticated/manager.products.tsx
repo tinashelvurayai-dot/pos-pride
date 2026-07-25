@@ -258,6 +258,7 @@ function ProductsPage() {
             </form>
           </DialogContent>
         </Dialog>
+        </div>
       </header>
 
       {products.isLoading ? (
