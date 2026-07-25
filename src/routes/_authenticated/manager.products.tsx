@@ -221,6 +221,12 @@ function ProductsPage() {
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Products</h1>
           <p className="mt-1 text-sm text-muted-foreground">Manage your catalog and variants.</p>
         </div>
+        <div className="flex flex-wrap items-center gap-3">
+          <label className="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm">
+            {hideImages ? <ImageOff className="h-4 w-4 text-muted-foreground" /> : <ImageIcon className="h-4 w-4 text-muted-foreground" />}
+            <span className="text-muted-foreground">Hide product images</span>
+            <Switch checked={hideImages} onCheckedChange={setHideImages} />
+          </label>
         <Dialog open={openNewProduct} onOpenChange={(o) => { setOpenNewProduct(o); if (!o) setImage(""); }}>
           <DialogTrigger asChild>
             <Button><Plus className="mr-2 h-4 w-4" /> New product</Button>
