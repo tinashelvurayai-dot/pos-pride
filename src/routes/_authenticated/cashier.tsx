@@ -17,6 +17,7 @@ import { ShoppingCart, Search, Trash2, Plus, Minus, Package as PackageIcon, Wifi
 import { enqueueSale, flushQueue, getQueue } from "@/lib/offline-queue";
 import { VoiceMicButton } from "@/components/voice-mic-button";
 import { PWAInstallButton } from "@/components/pwa-install-button";
+import { useHideImages } from "@/hooks/use-hide-images";
 
 export const Route = createFileRoute("/_authenticated/cashier")({
   component: CashierScreen,
