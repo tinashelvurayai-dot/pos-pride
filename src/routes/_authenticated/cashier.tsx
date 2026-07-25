@@ -17,6 +17,7 @@ import { ShoppingCart, Search, Trash2, Plus, Minus, Package as PackageIcon, Wifi
 import { enqueueSale, flushQueue, getQueue } from "@/lib/offline-queue";
 import { VoiceMicButton } from "@/components/voice-mic-button";
 import { PWAInstallButton } from "@/components/pwa-install-button";
+import { useHideImages } from "@/hooks/use-hide-images";
 
 export const Route = createFileRoute("/_authenticated/cashier")({
   component: CashierScreen,
@@ -43,6 +44,7 @@ function CashierScreen() {
   const { role, profile, session, loading } = useAuth();
   const qc = useQueryClient();
   const online = useOnline();
+  const [hideImages] = useHideImages();
   const [search, setSearch] = useState("");
   const [cart, setCart] = useState<CartLine[]>([]);
   const [payment, setPayment] = useState<"cash" | "mobile" | "other">("cash");
@@ -367,13 +369,15 @@ function CashierScreen() {
                     disabled={qty === 0}
                     className="group overflow-hidden rounded-xl border border-border bg-card text-left shadow-[var(--shadow-elev-1)] transition hover:-translate-y-0.5 hover:shadow-[var(--shadow-elev-2)] disabled:opacity-50 disabled:hover:translate-y-0"
                   >
-                    <div className="aspect-square overflow-hidden bg-accent">
-                      {image ? (
-                        <img src={image} alt={v.product?.name} className="h-full w-full object-cover transition group-hover:scale-105" />
-                      ) : (
-                        <div className="grid h-full w-full place-items-center"><PackageIcon className="h-8 w-8 text-muted-foreground" /></div>
-                      )}
-                    </div>
+                    {!hideImages && (
+                      <div className="aspect-square overflow-hidden bg-accent">
+                        {image ? (
+                          <img src={image} alt={v.product?.name} className="h-full w-full object-cover transition group-hover:scale-105" />
+                        ) : (
+                          <div className="grid h-full w-full place-items-center"><PackageIcon className="h-8 w-8 text-muted-foreground" /></div>
+                        )}
+                      </div>
+                    )}
                     <div className="p-3">
                       <div className="truncate text-sm font-semibold">{v.product?.name}</div>
                       <div className="mt-0.5 truncate text-xs text-muted-foreground">{v.variant_name}{v.size ? ` - ${v.size}` : ""}</div>

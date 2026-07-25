@@ -11,9 +11,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Plus, Trash2, Package as PackageIcon, Camera, Upload, Pencil } from "lucide-react";
+import { Plus, Trash2, Package as PackageIcon, Camera, Upload, Pencil, ImageOff, ImageIcon } from "lucide-react";
 import { formatCurrency } from "@/lib/format";
 import { fileToCompressedDataUrl } from "@/lib/image-utils";
+import { Switch } from "@/components/ui/switch";
+import { useHideImages } from "@/hooks/use-hide-images";
 
 export const Route = createFileRoute("/_authenticated/manager/products")({
   component: ProductsPage,
@@ -87,6 +89,10 @@ function ProductsPage() {
   const [variantFor, setVariantFor] = useState<Product | null>(null);
   const [image, setImage] = useState("");
   const [editingVariant, setEditingVariant] = useState<{ id: string; price: number } | null>(null);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [editImage, setEditImage] = useState("");
+  const [hideImages, setHideImages] = useHideImages();
+
 
   const products = useQuery({
     queryKey: ["products", "with-variants"],
@@ -122,6 +128,30 @@ function ProductsPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const updateProduct = useMutation({
+    mutationFn: async (input: { id: string; name: string; description: string; category: string; base_price: number; image_url: string }) => {
+      const { error } = await supabase.from("products").update({
+        name: input.name,
+        description: input.description || null,
+        category: input.category || null,
+        base_price: input.base_price || null,
+        image_url: input.image_url || null,
+      }).eq("id", input.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Product updated");
+      qc.invalidateQueries({ queryKey: ["products"] });
+      setEditingProduct(null);
+      setEditImage("");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  function openEdit(p: Product) {
+    setEditingProduct(p);
+    setEditImage(p.image_url ?? "");
+  }
   const createVariant = useMutation({
     mutationFn: async (input: { product_id: string; variant_name: string; size: string; flavour: string; price: number; sku: string; initial_qty: number }) => {
       const { data, error } = await supabase.from("product_variants").insert({
@@ -191,6 +221,12 @@ function ProductsPage() {
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Products</h1>
           <p className="mt-1 text-sm text-muted-foreground">Manage your catalog and variants.</p>
         </div>
+        <div className="flex flex-wrap items-center gap-3">
+          <label className="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm">
+            {hideImages ? <ImageOff className="h-4 w-4 text-muted-foreground" /> : <ImageIcon className="h-4 w-4 text-muted-foreground" />}
+            <span className="text-muted-foreground">Hide product images</span>
+            <Switch checked={hideImages} onCheckedChange={setHideImages} />
+          </label>
         <Dialog open={openNewProduct} onOpenChange={(o) => { setOpenNewProduct(o); if (!o) setImage(""); }}>
           <DialogTrigger asChild>
             <Button><Plus className="mr-2 h-4 w-4" /> New product</Button>
@@ -222,6 +258,7 @@ function ProductsPage() {
             </form>
           </DialogContent>
         </Dialog>
+        </div>
       </header>
 
       {products.isLoading ? (
@@ -237,9 +274,11 @@ function ProductsPage() {
           {products.data?.map((p) => (
             <Card key={p.id} className="overflow-hidden">
               <div className="flex flex-col sm:flex-row items-start gap-4 p-4 sm:p-5">
-                <div className="grid h-20 w-20 shrink-0 place-items-center overflow-hidden rounded-lg bg-accent">
-                  {p.image_url ? <img src={p.image_url} alt={p.name} className="h-full w-full object-cover" /> : <PackageIcon className="h-6 w-6 text-muted-foreground" />}
-                </div>
+                {!hideImages && (
+                  <div className="grid h-20 w-20 shrink-0 place-items-center overflow-hidden rounded-lg bg-accent">
+                    {p.image_url ? <img src={p.image_url} alt={p.name} className="h-full w-full object-cover" /> : <PackageIcon className="h-6 w-6 text-muted-foreground" />}
+                  </div>
+                )}
                 <div className="flex-1 min-w-0 w-full">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="min-w-0">
@@ -251,12 +290,14 @@ function ProductsPage() {
                       {p.description && <p className="mt-2 text-sm text-muted-foreground">{p.description}</p>}
                     </div>
                     <div className="flex gap-2">
+                      <Button size="sm" variant="outline" onClick={() => openEdit(p)}><Pencil className="mr-1 h-3.5 w-3.5" /> Edit</Button>
                       <Button size="sm" variant="outline" onClick={() => setVariantFor(p)}><Plus className="mr-1 h-3.5 w-3.5" /> Variant</Button>
                       <Button size="sm" variant="ghost" onClick={() => confirm(`Delete ${p.name}?`) && deleteProduct.mutate(p.id)}>
                         <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>
                     </div>
                   </div>
+
 
                   {p.variants.length > 0 && (
                     <div className="mt-4 grid gap-2 md:grid-cols-2 lg:grid-cols-3">
@@ -349,6 +390,38 @@ function ProductsPage() {
                 <Input name="price" type="number" step="0.01" min="0" defaultValue={editingVariant.price} required autoFocus />
               </div>
               <DialogFooter><Button type="submit" disabled={updatePrice.isPending}>Save</Button></DialogFooter>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!editingProduct} onOpenChange={(o) => { if (!o) { setEditingProduct(null); setEditImage(""); } }}>
+        <DialogContent className="max-h-[90vh] overflow-auto">
+          <DialogHeader><DialogTitle>Edit product</DialogTitle></DialogHeader>
+          {editingProduct && (
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                const fd = new FormData(e.currentTarget);
+                updateProduct.mutate({
+                  id: editingProduct.id,
+                  name: String(fd.get("name") ?? "").trim(),
+                  description: String(fd.get("description") ?? ""),
+                  category: String(fd.get("category") ?? ""),
+                  base_price: parseFloat(String(fd.get("base_price") ?? "0")) || 0,
+                  image_url: editImage,
+                });
+              }}
+              className="space-y-4"
+            >
+              <ProductImagePicker value={editImage} onChange={setEditImage} />
+              <div className="space-y-2"><Label>Name</Label><Input name="name" required maxLength={100} defaultValue={editingProduct.name} /></div>
+              <div className="space-y-2"><Label>Category</Label><Input name="category" maxLength={60} defaultValue={editingProduct.category ?? ""} /></div>
+              <div className="space-y-2"><Label>Base price (optional)</Label><Input name="base_price" type="number" step="0.01" min="0" defaultValue={editingProduct.base_price ?? ""} /></div>
+              <div className="space-y-2"><Label>Description</Label><Textarea name="description" rows={3} maxLength={500} defaultValue={editingProduct.description ?? ""} /></div>
+              <DialogFooter>
+                <Button type="submit" disabled={updateProduct.isPending}>Save changes</Button>
+              </DialogFooter>
             </form>
           )}
         </DialogContent>
