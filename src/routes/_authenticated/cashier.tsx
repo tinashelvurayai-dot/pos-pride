@@ -44,6 +44,7 @@ function CashierScreen() {
   const { role, profile, session, loading } = useAuth();
   const qc = useQueryClient();
   const online = useOnline();
+  const [hideImages] = useHideImages();
   const [search, setSearch] = useState("");
   const [cart, setCart] = useState<CartLine[]>([]);
   const [payment, setPayment] = useState<"cash" | "mobile" | "other">("cash");
