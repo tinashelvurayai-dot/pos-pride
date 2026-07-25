@@ -369,13 +369,15 @@ function CashierScreen() {
                     disabled={qty === 0}
                     className="group overflow-hidden rounded-xl border border-border bg-card text-left shadow-[var(--shadow-elev-1)] transition hover:-translate-y-0.5 hover:shadow-[var(--shadow-elev-2)] disabled:opacity-50 disabled:hover:translate-y-0"
                   >
-                    <div className="aspect-square overflow-hidden bg-accent">
-                      {image ? (
-                        <img src={image} alt={v.product?.name} className="h-full w-full object-cover transition group-hover:scale-105" />
-                      ) : (
-                        <div className="grid h-full w-full place-items-center"><PackageIcon className="h-8 w-8 text-muted-foreground" /></div>
-                      )}
-                    </div>
+                    {!hideImages && (
+                      <div className="aspect-square overflow-hidden bg-accent">
+                        {image ? (
+                          <img src={image} alt={v.product?.name} className="h-full w-full object-cover transition group-hover:scale-105" />
+                        ) : (
+                          <div className="grid h-full w-full place-items-center"><PackageIcon className="h-8 w-8 text-muted-foreground" /></div>
+                        )}
+                      </div>
+                    )}
                     <div className="p-3">
                       <div className="truncate text-sm font-semibold">{v.product?.name}</div>
                       <div className="mt-0.5 truncate text-xs text-muted-foreground">{v.variant_name}{v.size ? ` - ${v.size}` : ""}</div>
