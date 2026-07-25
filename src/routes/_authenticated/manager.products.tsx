@@ -89,6 +89,10 @@ function ProductsPage() {
   const [variantFor, setVariantFor] = useState<Product | null>(null);
   const [image, setImage] = useState("");
   const [editingVariant, setEditingVariant] = useState<{ id: string; price: number } | null>(null);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [editImage, setEditImage] = useState("");
+  const [hideImages, setHideImages] = useHideImages();
+
 
   const products = useQuery({
     queryKey: ["products", "with-variants"],
