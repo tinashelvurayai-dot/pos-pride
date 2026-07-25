@@ -128,7 +128,31 @@ function ProductsPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const createVariant = useMutation({
+  const updateProduct = useMutation({
+    mutationFn: async (input: { id: string; name: string; description: string; category: string; base_price: number; image_url: string }) => {
+      const { error } = await supabase.from("products").update({
+        name: input.name,
+        description: input.description || null,
+        category: input.category || null,
+        base_price: input.base_price || null,
+        image_url: input.image_url || null,
+      }).eq("id", input.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Product updated");
+      qc.invalidateQueries({ queryKey: ["products"] });
+      setEditingProduct(null);
+      setEditImage("");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  function openEdit(p: Product) {
+    setEditingProduct(p);
+    setEditImage(p.image_url ?? "");
+  }
+
     mutationFn: async (input: { product_id: string; variant_name: string; size: string; flavour: string; price: number; sku: string; initial_qty: number }) => {
       const { data, error } = await supabase.from("product_variants").insert({
         product_id: input.product_id,
