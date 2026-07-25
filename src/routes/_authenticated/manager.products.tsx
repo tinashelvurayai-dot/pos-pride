@@ -11,9 +11,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Plus, Trash2, Package as PackageIcon, Camera, Upload, Pencil } from "lucide-react";
+import { Plus, Trash2, Package as PackageIcon, Camera, Upload, Pencil, ImageOff, ImageIcon } from "lucide-react";
 import { formatCurrency } from "@/lib/format";
 import { fileToCompressedDataUrl } from "@/lib/image-utils";
+import { Switch } from "@/components/ui/switch";
+import { useHideImages } from "@/hooks/use-hide-images";
 
 export const Route = createFileRoute("/_authenticated/manager/products")({
   component: ProductsPage,
