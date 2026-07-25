@@ -30,12 +30,23 @@ function Landing() {
 
   async function enterCashierMode() {
     setGuestBusy(true);
-    const { error } = await supabase.auth.signInAnonymously({
-      options: { data: { full_name: "Guest Cashier" } },
-    });
-    setGuestBusy(false);
-    if (error) return toast.error(error.message);
-    navigate({ to: "/cashier" });
+    try {
+      localStorage.setItem("cashier_unlock", "true");
+      const { data } = await supabase.auth.getSession();
+      // Only attempt anonymous sign-in when online AND no session yet.
+      if (!data.session && typeof navigator !== "undefined" && navigator.onLine) {
+        const { error } = await supabase.auth.signInAnonymously({
+          options: { data: { full_name: "Guest Cashier" } },
+        });
+        if (error) {
+          // Non-fatal offline: cashier_unlock flag lets the route render.
+          console.warn("Cashier anon sign-in failed:", error.message);
+        }
+      }
+      navigate({ to: "/cashier" });
+    } finally {
+      setGuestBusy(false);
+    }
   }
 
   function handleLogoTap() {
