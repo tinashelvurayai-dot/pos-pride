@@ -274,9 +274,11 @@ function ProductsPage() {
           {products.data?.map((p) => (
             <Card key={p.id} className="overflow-hidden">
               <div className="flex flex-col sm:flex-row items-start gap-4 p-4 sm:p-5">
-                <div className="grid h-20 w-20 shrink-0 place-items-center overflow-hidden rounded-lg bg-accent">
-                  {p.image_url ? <img src={p.image_url} alt={p.name} className="h-full w-full object-cover" /> : <PackageIcon className="h-6 w-6 text-muted-foreground" />}
-                </div>
+                {!hideImages && (
+                  <div className="grid h-20 w-20 shrink-0 place-items-center overflow-hidden rounded-lg bg-accent">
+                    {p.image_url ? <img src={p.image_url} alt={p.name} className="h-full w-full object-cover" /> : <PackageIcon className="h-6 w-6 text-muted-foreground" />}
+                  </div>
+                )}
                 <div className="flex-1 min-w-0 w-full">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="min-w-0">
@@ -288,12 +290,14 @@ function ProductsPage() {
                       {p.description && <p className="mt-2 text-sm text-muted-foreground">{p.description}</p>}
                     </div>
                     <div className="flex gap-2">
+                      <Button size="sm" variant="outline" onClick={() => openEdit(p)}><Pencil className="mr-1 h-3.5 w-3.5" /> Edit</Button>
                       <Button size="sm" variant="outline" onClick={() => setVariantFor(p)}><Plus className="mr-1 h-3.5 w-3.5" /> Variant</Button>
                       <Button size="sm" variant="ghost" onClick={() => confirm(`Delete ${p.name}?`) && deleteProduct.mutate(p.id)}>
                         <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>
                     </div>
                   </div>
+
 
                   {p.variants.length > 0 && (
                     <div className="mt-4 grid gap-2 md:grid-cols-2 lg:grid-cols-3">
