@@ -43,7 +43,7 @@ function StockPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("stock")
-        .select("id, quantity, low_stock_alert_level, variant:product_variants(id, variant_name, size, price, product:products(name, category))")
+        .select("id, quantity, low_stock_alert_level, available, variant:product_variants(id, variant_name, size, price, product:products(name, category))")
         .order("quantity");
       if (error) throw error;
       return data as unknown as StockRow[];
