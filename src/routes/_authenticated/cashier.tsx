@@ -60,7 +60,7 @@ function CashierScreen() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("product_variants")
-        .select("id, variant_name, size, flavour, price, image_url, active, product:products(id, name, category, image_url), stock(quantity)")
+        .select("id, variant_name, size, flavour, price, image_url, active, product:products(id, name, category, image_url), stock(quantity, available)")
         .eq("active", true)
         .order("variant_name");
       if (error) throw error;
