@@ -21,6 +21,7 @@ type StockRow = {
   id: string;
   quantity: number;
   low_stock_alert_level: number;
+  available?: boolean;
   variant: {
     id: string;
     variant_name: string;
@@ -42,7 +43,7 @@ function StockPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("stock")
-        .select("id, quantity, low_stock_alert_level, variant:product_variants(id, variant_name, size, price, product:products(name, category))")
+        .select("id, quantity, low_stock_alert_level, available, variant:product_variants(id, variant_name, size, price, product:products(name, category))")
         .order("quantity");
       if (error) throw error;
       return data as unknown as StockRow[];
@@ -89,6 +90,31 @@ function StockPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const markAvailable = useMutation({
+    mutationFn: async (variant_id: string) => {
+      const { error } = await supabase.rpc("mark_variant_available" as any, { _variant_id: variant_id } as any);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Marked as available");
+      qc.invalidateQueries({ queryKey: ["stock"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const markAllAvailable = useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase.rpc("mark_all_available" as any);
+      if (error) throw error;
+      return (data as unknown as number) ?? 0;
+    },
+    onSuccess: (n) => {
+      toast.success(`Marked ${n} item${n === 1 ? "" : "s"} as available`);
+      qc.invalidateQueries({ queryKey: ["stock"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const rows = stock.data ?? [];
 
   const stats = useMemo(() => {
@@ -107,11 +133,25 @@ function StockPage() {
     return matchQ && matchS;
   });
 
+  const flaggedOutCount = rows.filter((r) => r.available === false).length;
+
   return (
     <div className="p-4 sm:p-6 md:p-10">
-      <header className="mb-6">
-        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Stock control</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Smart inventory monitoring, restock, and price adjustments.</p>
+      <header className="mb-6 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Stock control</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Smart inventory monitoring, restock, and price adjustments.
+            {flaggedOutCount > 0 && <> · <span className="font-semibold text-destructive">{flaggedOutCount} flagged out by cashiers</span></>}
+          </p>
+        </div>
+        <Button
+          onClick={() => { if (confirm("Mark every variant as Stock Available? Use this when the shop has been restocked.")) markAllAvailable.mutate(); }}
+          disabled={markAllAvailable.isPending}
+          className="gap-2"
+        >
+          <Boxes className="h-4 w-4" /> Stock Available (All)
+        </Button>
       </header>
 
       <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-4">
@@ -172,7 +212,9 @@ function StockPage() {
                   onSave={(q, l) => updateStock.mutate({ id: r.id, quantity: q, low: l })}
                   onAdd={() => setAddStockFor(r)}
                   onEditPrice={() => setEditPriceFor(r)}
+                  onMarkAvailable={() => r.variant && markAvailable.mutate(r.variant.id)}
                   pending={updateStock.isPending}
+                  markPending={markAvailable.isPending}
                 />
               ))}
             </TableBody>
@@ -239,14 +281,15 @@ function StatCard({ icon, label, value, tone }: { icon: React.ReactNode; label: 
   );
 }
 
-function StockEditor({ row, onSave, onAdd, onEditPrice, pending }: { row: StockRow; onSave: (q: number, l: number) => void; onAdd: () => void; onEditPrice: () => void; pending: boolean }) {
+function StockEditor({ row, onSave, onAdd, onEditPrice, onMarkAvailable, pending, markPending }: { row: StockRow; onSave: (q: number, l: number) => void; onAdd: () => void; onEditPrice: () => void; onMarkAvailable: () => void; pending: boolean; markPending: boolean }) {
   const [q, setQ] = useState(row.quantity);
   const [l, setL] = useState(row.low_stock_alert_level);
   const dirty = q !== row.quantity || l !== row.low_stock_alert_level;
-  const status = q === 0 ? "out" : q <= l ? "low" : "ok";
+  const flaggedOut = row.available === false;
+  const status = flaggedOut ? "flagged" : q === 0 ? "out" : q <= l ? "low" : "ok";
   const value = q * Number(row.variant?.price ?? 0);
   return (
-    <TableRow>
+    <TableRow className={flaggedOut ? "bg-red-50/50" : undefined}>
       <TableCell className="font-medium">{row.variant?.product?.name}</TableCell>
       <TableCell>
         <div>{row.variant?.variant_name}</div>
@@ -261,12 +304,18 @@ function StockEditor({ row, onSave, onAdd, onEditPrice, pending }: { row: StockR
       <TableCell><Input type="number" min={0} value={l} onChange={(e) => setL(Number(e.target.value) || 0)} className="w-20" /></TableCell>
       <TableCell className="text-sm text-muted-foreground">{formatCurrency(value)}</TableCell>
       <TableCell>
-        {status === "out" ? <Badge variant="destructive">Out</Badge> : status === "low" ? <Badge className="bg-amber-500 text-white">Low</Badge> : <Badge variant="secondary">OK</Badge>}
+        {status === "flagged" ? <Badge variant="destructive">Flagged out</Badge>
+          : status === "out" ? <Badge variant="destructive">Out</Badge>
+          : status === "low" ? <Badge className="bg-amber-500 text-white">Low</Badge>
+          : <Badge variant="secondary">OK</Badge>}
       </TableCell>
       <TableCell>
-        <div className="flex gap-1">
+        <div className="flex flex-wrap gap-1">
           <Button size="sm" variant="outline" onClick={onAdd}><Plus className="h-3.5 w-3.5" /></Button>
           <Button size="sm" disabled={!dirty || pending} onClick={() => onSave(q, l)}>Save</Button>
+          <Button size="sm" variant={flaggedOut ? "default" : "outline"} disabled={markPending} onClick={onMarkAvailable} className={flaggedOut ? "bg-emerald-600 hover:bg-emerald-700" : ""}>
+            Stock Available
+          </Button>
         </div>
       </TableCell>
     </TableRow>

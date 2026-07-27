@@ -32,7 +32,7 @@ type Variant = {
   image_url: string | null;
   active: boolean;
   product: { id: string; name: string; category: string | null; image_url: string | null } | null;
-  stock: { quantity: number } | null;
+  stock: { quantity: number; available?: boolean } | null;
 };
 
 type CartLine = { variant: Variant; qty: number };
@@ -60,7 +60,7 @@ function CashierScreen() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("product_variants")
-        .select("id, variant_name, size, flavour, price, image_url, active, product:products(id, name, category, image_url), stock(quantity)")
+        .select("id, variant_name, size, flavour, price, image_url, active, product:products(id, name, category, image_url), stock(quantity, available)")
         .eq("active", true)
         .order("variant_name");
       if (error) throw error;
@@ -137,11 +137,15 @@ function CashierScreen() {
   }, [online, qc, syncOfflineQueue]);
 
   function addToCart(v: Variant) {
+    if (v.stock?.available === false) {
+      toast.error("Marked out of stock");
+      return;
+    }
     const stockQty = v.stock?.quantity ?? 0;
     setCart((prev) => {
       const existing = prev.find((l) => l.variant.id === v.id);
       const currentQty = existing?.qty ?? 0;
-      if (currentQty + 1 > stockQty) {
+      if (stockQty > 0 && currentQty + 1 > stockQty) {
         toast.error(`Only ${stockQty} in stock`);
         return prev;
       }
@@ -149,6 +153,18 @@ function CashierScreen() {
       return [...prev, { variant: v, qty: 1 }];
     });
   }
+
+  const flagOut = useMutation({
+    mutationFn: async (variant_id: string) => {
+      const { error } = await supabase.rpc("flag_out_of_stock" as any, { _variant_id: variant_id } as any);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Flagged as out of stock");
+      qc.invalidateQueries({ queryKey: ["cashier", "variants"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
   function changeQty(id: string, delta: number) {
     setCart((prev) => prev.flatMap((l) => {
       if (l.variant.id !== id) return [l];
@@ -361,32 +377,45 @@ function CashierScreen() {
             <div className="grid gap-3 grid-cols-2 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
               {filtered.map((v) => {
                 const qty = v.stock?.quantity ?? 0;
+                const available = v.stock?.available !== false;
+                const isOut = !available || qty === 0;
                 const image = v.image_url || v.product?.image_url;
                 return (
-                  <button
-                    key={v.id}
-                    onClick={() => addToCart(v)}
-                    disabled={qty === 0}
-                    className="group overflow-hidden rounded-xl border border-border bg-card text-left shadow-[var(--shadow-elev-1)] transition hover:-translate-y-0.5 hover:shadow-[var(--shadow-elev-2)] disabled:opacity-50 disabled:hover:translate-y-0"
-                  >
-                    {!hideImages && (
-                      <div className="aspect-square overflow-hidden bg-accent">
-                        {image ? (
-                          <img src={image} alt={v.product?.name} className="h-full w-full object-cover transition group-hover:scale-105" />
-                        ) : (
-                          <div className="grid h-full w-full place-items-center"><PackageIcon className="h-8 w-8 text-muted-foreground" /></div>
-                        )}
+                  <div key={v.id} className="relative">
+                    <button
+                      onClick={() => addToCart(v)}
+                      disabled={isOut}
+                      className="group w-full overflow-hidden rounded-xl border border-border bg-card text-left shadow-[var(--shadow-elev-1)] transition hover:-translate-y-0.5 hover:shadow-[var(--shadow-elev-2)] disabled:opacity-50 disabled:hover:translate-y-0"
+                    >
+                      {!hideImages && (
+                        <div className="aspect-square overflow-hidden bg-accent">
+                          {image ? (
+                            <img src={image} alt={v.product?.name} className="h-full w-full object-cover transition group-hover:scale-105" />
+                          ) : (
+                            <div className="grid h-full w-full place-items-center"><PackageIcon className="h-8 w-8 text-muted-foreground" /></div>
+                          )}
+                        </div>
+                      )}
+                      <div className="p-3">
+                        <div className="truncate text-sm font-semibold">{v.product?.name}</div>
+                        <div className="mt-0.5 truncate text-xs text-muted-foreground">{v.variant_name}{v.size ? ` - ${v.size}` : ""}</div>
+                        <div className="mt-2 flex items-center justify-between">
+                          <span className="text-base font-bold">{formatCurrency(v.price)}</span>
+                          {isOut ? <Badge variant="destructive">Out</Badge> : qty > 0 && qty <= 5 ? <Badge className="bg-amber-500 text-white">Low</Badge> : <span className="text-xs text-muted-foreground">{qty > 0 ? `${qty} left` : "In stock"}</span>}
+                        </div>
                       </div>
+                    </button>
+                    {available && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); if (confirm(`Flag "${v.product?.name}" as out of stock?`)) flagOut.mutate(v.id); }}
+                        disabled={!online || flagOut.isPending}
+                        className="absolute right-2 top-2 rounded-md bg-white/95 px-2 py-1 text-[10px] font-semibold text-destructive shadow ring-1 ring-destructive/30 hover:bg-destructive hover:text-white disabled:opacity-40"
+                        title={online ? "Flag out of stock" : "Requires connection"}
+                      >
+                        Out of Stock
+                      </button>
                     )}
-                    <div className="p-3">
-                      <div className="truncate text-sm font-semibold">{v.product?.name}</div>
-                      <div className="mt-0.5 truncate text-xs text-muted-foreground">{v.variant_name}{v.size ? ` - ${v.size}` : ""}</div>
-                      <div className="mt-2 flex items-center justify-between">
-                        <span className="text-base font-bold">{formatCurrency(v.price)}</span>
-                        {qty === 0 ? <Badge variant="destructive">Out</Badge> : qty <= 5 ? <Badge className="bg-amber-500 text-white">Low</Badge> : <span className="text-xs text-muted-foreground">{qty} left</span>}
-                      </div>
-                    </div>
-                  </button>
+                  </div>
                 );
               })}
             </div>
