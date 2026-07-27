@@ -32,7 +32,7 @@ type Variant = {
   image_url: string | null;
   active: boolean;
   product: { id: string; name: string; category: string | null; image_url: string | null } | null;
-  stock: { quantity: number } | null;
+  stock: { quantity: number; available?: boolean } | null;
 };
 
 type CartLine = { variant: Variant; qty: number };
