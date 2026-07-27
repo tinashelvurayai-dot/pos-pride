@@ -407,6 +407,7 @@ export type Database = {
       }
       stock: {
         Row: {
+          available: boolean
           id: string
           low_stock_alert_level: number
           quantity: number
@@ -414,6 +415,7 @@ export type Database = {
           variant_id: string
         }
         Insert: {
+          available?: boolean
           id?: string
           low_stock_alert_level?: number
           quantity?: number
@@ -421,6 +423,7 @@ export type Database = {
           variant_id: string
         }
         Update: {
+          available?: boolean
           id?: string
           low_stock_alert_level?: number
           quantity?: number
@@ -502,12 +505,18 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      flag_out_of_stock: { Args: { _variant_id: string }; Returns: undefined }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
         Returns: boolean
+      }
+      mark_all_available: { Args: never; Returns: number }
+      mark_variant_available: {
+        Args: { _variant_id: string }
+        Returns: undefined
       }
     }
     Enums: {
