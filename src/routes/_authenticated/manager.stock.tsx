@@ -281,14 +281,15 @@ function StatCard({ icon, label, value, tone }: { icon: React.ReactNode; label: 
   );
 }
 
-function StockEditor({ row, onSave, onAdd, onEditPrice, pending }: { row: StockRow; onSave: (q: number, l: number) => void; onAdd: () => void; onEditPrice: () => void; pending: boolean }) {
+function StockEditor({ row, onSave, onAdd, onEditPrice, onMarkAvailable, pending, markPending }: { row: StockRow; onSave: (q: number, l: number) => void; onAdd: () => void; onEditPrice: () => void; onMarkAvailable: () => void; pending: boolean; markPending: boolean }) {
   const [q, setQ] = useState(row.quantity);
   const [l, setL] = useState(row.low_stock_alert_level);
   const dirty = q !== row.quantity || l !== row.low_stock_alert_level;
-  const status = q === 0 ? "out" : q <= l ? "low" : "ok";
+  const flaggedOut = row.available === false;
+  const status = flaggedOut ? "flagged" : q === 0 ? "out" : q <= l ? "low" : "ok";
   const value = q * Number(row.variant?.price ?? 0);
   return (
-    <TableRow>
+    <TableRow className={flaggedOut ? "bg-red-50/50" : undefined}>
       <TableCell className="font-medium">{row.variant?.product?.name}</TableCell>
       <TableCell>
         <div>{row.variant?.variant_name}</div>
@@ -303,12 +304,18 @@ function StockEditor({ row, onSave, onAdd, onEditPrice, pending }: { row: StockR
       <TableCell><Input type="number" min={0} value={l} onChange={(e) => setL(Number(e.target.value) || 0)} className="w-20" /></TableCell>
       <TableCell className="text-sm text-muted-foreground">{formatCurrency(value)}</TableCell>
       <TableCell>
-        {status === "out" ? <Badge variant="destructive">Out</Badge> : status === "low" ? <Badge className="bg-amber-500 text-white">Low</Badge> : <Badge variant="secondary">OK</Badge>}
+        {status === "flagged" ? <Badge variant="destructive">Flagged out</Badge>
+          : status === "out" ? <Badge variant="destructive">Out</Badge>
+          : status === "low" ? <Badge className="bg-amber-500 text-white">Low</Badge>
+          : <Badge variant="secondary">OK</Badge>}
       </TableCell>
       <TableCell>
-        <div className="flex gap-1">
+        <div className="flex flex-wrap gap-1">
           <Button size="sm" variant="outline" onClick={onAdd}><Plus className="h-3.5 w-3.5" /></Button>
           <Button size="sm" disabled={!dirty || pending} onClick={() => onSave(q, l)}>Save</Button>
+          <Button size="sm" variant={flaggedOut ? "default" : "outline"} disabled={markPending} onClick={onMarkAvailable} className={flaggedOut ? "bg-emerald-600 hover:bg-emerald-700" : ""}>
+            Stock Available
+          </Button>
         </div>
       </TableCell>
     </TableRow>
