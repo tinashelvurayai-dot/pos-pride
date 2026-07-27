@@ -212,7 +212,9 @@ function StockPage() {
                   onSave={(q, l) => updateStock.mutate({ id: r.id, quantity: q, low: l })}
                   onAdd={() => setAddStockFor(r)}
                   onEditPrice={() => setEditPriceFor(r)}
+                  onMarkAvailable={() => r.variant && markAvailable.mutate(r.variant.id)}
                   pending={updateStock.isPending}
+                  markPending={markAvailable.isPending}
                 />
               ))}
             </TableBody>
