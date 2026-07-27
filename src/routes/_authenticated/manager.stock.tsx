@@ -90,6 +90,31 @@ function StockPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const markAvailable = useMutation({
+    mutationFn: async (variant_id: string) => {
+      const { error } = await supabase.rpc("mark_variant_available" as any, { _variant_id: variant_id } as any);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Marked as available");
+      qc.invalidateQueries({ queryKey: ["stock"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const markAllAvailable = useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase.rpc("mark_all_available" as any);
+      if (error) throw error;
+      return (data as unknown as number) ?? 0;
+    },
+    onSuccess: (n) => {
+      toast.success(`Marked ${n} item${n === 1 ? "" : "s"} as available`);
+      qc.invalidateQueries({ queryKey: ["stock"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const rows = stock.data ?? [];
 
   const stats = useMemo(() => {
