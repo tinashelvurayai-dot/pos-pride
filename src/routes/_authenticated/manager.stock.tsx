@@ -21,6 +21,7 @@ type StockRow = {
   id: string;
   quantity: number;
   low_stock_alert_level: number;
+  available?: boolean;
   variant: {
     id: string;
     variant_name: string;
