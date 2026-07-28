@@ -392,7 +392,7 @@ function CashierScreen() {
                         <div className="mt-0.5 truncate text-xs text-muted-foreground">{v.variant_name}{v.size ? ` - ${v.size}` : ""}</div>
                         <div className="mt-2 flex items-center justify-between">
                           <span className="text-base font-bold">{formatCurrency(v.price)}</span>
-                          {isOut ? <Badge variant="destructive">Out</Badge> : qty > 0 && qty <= 5 ? <Badge className="bg-amber-500 text-white">Low</Badge> : <span className="text-xs text-muted-foreground">{qty > 0 ? `${qty} left` : "In stock"}</span>}
+                          {isOut ? <Badge variant="destructive">Out</Badge> : <span className="text-xs text-muted-foreground">In stock</span>}
                         </div>
                       </div>
                     </button>
