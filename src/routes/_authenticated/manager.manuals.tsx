@@ -28,33 +28,38 @@ function ManagerManualContent() {
         <p className="text-muted-foreground">Create products with base info, take a product photo, or upload an image from the device. Each product can have multiple variants - size, flavour or colour, price, SKU, and initial stock. Managers can edit prices and details later.</p>
       </section>
       <section>
-        <h3 className="font-semibold text-base">4. Stock</h3>
-        <p className="text-muted-foreground">Adjust quantity, add new stock, edit prices, and set the low-stock alert level for every variant. Smart status cards highlight Out, Low, and OK items so you can react quickly.</p>
+        <h3 className="font-semibold text-base">4. Stock — how it works now</h3>
+        <p className="text-muted-foreground">Every product is treated as <span className="font-medium">In Stock by default</span>. Cashiers can sell any item without a quantity check. When a cashier notices an item has run out on the shelf, they press <span className="font-medium">Out of Stock</span> on that product tile — it is instantly flagged and blocked from further sales. Managers can un-flag one item with <span className="font-medium">Stock Available</span> or reset everything with <span className="font-medium">Stock Available (All)</span> after a restock.</p>
       </section>
       <section>
-        <h3 className="font-semibold text-base">5. Staff</h3>
-        <p className="text-muted-foreground">See everyone who has access. Managers can update cashier names, IDs, details, and active status. Cashier mode can also be opened without a password from the welcome or auth page for shared counter devices.</p>
+        <h3 className="font-semibold text-base">5. Recording new stock received</h3>
+        <p className="text-muted-foreground">When a delivery arrives, open Stock, find the variant, press the <span className="font-medium">+</span> button and enter the number of <span className="font-medium">packets brought in</span>. The system adds that to the on-hand count. You do not need to count the whole shop — only what came in.</p>
       </section>
       <section>
-        <h3 className="font-semibold text-base">6. Sales, daily cash, expenses, and profit</h3>
-        <p className="text-muted-foreground">Transaction log with cashier, payment method, item count, and total. Use it for daily reconciliation.</p>
+        <h3 className="font-semibold text-base">6. Staff</h3>
+        <p className="text-muted-foreground">See everyone who has access. Managers can update cashier names, IDs, details, and active status. Cashier mode opens without a password from the welcome page for shared counter devices.</p>
       </section>
       <section>
-        <h3 className="font-semibold text-base">7. Suppliers, orders, and forecasting</h3>
+        <h3 className="font-semibold text-base">7. Sales, daily cash, expenses, and profit</h3>
+        <p className="text-muted-foreground">Transaction log with cashier, payment method, item count, and total. Use <span className="font-medium">Export CSV</span> on the Sales page for accounting or backup.</p>
+      </section>
+      <section>
+        <h3 className="font-semibold text-base">8. Suppliers, orders, and forecasting</h3>
         <p className="text-muted-foreground">Use Suppliers for purchase orders and auto-reorder, Orders for out-of-stock requests from cashiers, and AI Sales Forecast for run-out predictions based on sales velocity.</p>
       </section>
       <section>
-        <h3 className="font-semibold text-base">8. Cashier manual toggle</h3>
-        <p className="text-muted-foreground">On this Manuals page you can show or hide the cashier manual button inside the cashier dashboard. Turn it on so cashiers can self-serve; turn it off when you want a locked-down look during a busy shift.</p>
+        <h3 className="font-semibold text-base">9. Cashier manual toggle</h3>
+        <p className="text-muted-foreground">On this Manuals page you can show or hide the cashier manual button inside the cashier dashboard.</p>
       </section>
       <section>
-        <h3 className="font-semibold text-base">9. Offline behaviour and installation</h3>
-        <p className="text-muted-foreground">Use the Install button from the published site in Chrome or Edge so the app appears alongside other device apps. After the cashier dashboard loads once, cashiers can sell offline; sales queue on the device and sync automatically when online.</p>
+        <h3 className="font-semibold text-base">10. Offline behaviour and installation</h3>
+        <p className="text-muted-foreground">Install from Chrome so the app appears alongside other device apps. Once the cashier dashboard has loaded once online, cashiers can sell fully offline — sales queue on the device and sync automatically when the connection returns.</p>
       </section>
       <section>
-        <h3 className="font-semibold text-base">10. Voice commands</h3>
+        <h3 className="font-semibold text-base">11. Voice commands</h3>
         <p className="text-muted-foreground">Cashier voice commands speed up checkout. The cashier dashboard has a Voice help button, and Orders has a Dictate button for restock entries.</p>
       </section>
+
     </div>
   );
 }
