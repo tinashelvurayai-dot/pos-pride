@@ -141,18 +141,13 @@ function CashierScreen() {
       toast.error("Marked out of stock");
       return;
     }
-    const stockQty = v.stock?.quantity ?? 0;
     setCart((prev) => {
       const existing = prev.find((l) => l.variant.id === v.id);
-      const currentQty = existing?.qty ?? 0;
-      if (stockQty > 0 && currentQty + 1 > stockQty) {
-        toast.error(`Only ${stockQty} in stock`);
-        return prev;
-      }
       if (existing) return prev.map((l) => (l.variant.id === v.id ? { ...l, qty: l.qty + 1 } : l));
       return [...prev, { variant: v, qty: 1 }];
     });
   }
+
 
   const flagOut = useMutation({
     mutationFn: async (variant_id: string) => {
@@ -170,13 +165,10 @@ function CashierScreen() {
       if (l.variant.id !== id) return [l];
       const next = l.qty + delta;
       if (next <= 0) return [];
-      if (next > (l.variant.stock?.quantity ?? 0)) {
-        toast.error(`Only ${l.variant.stock?.quantity ?? 0} in stock`);
-        return [l];
-      }
       return [{ ...l, qty: next }];
     }));
   }
+
   function removeLine(id: string) { setCart((prev) => prev.filter((l) => l.variant.id !== id)); }
 
   function findVariantByPhrase(phrase: string): Variant | null {
