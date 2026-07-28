@@ -235,8 +235,8 @@ function StockPage() {
               }}
               className="space-y-4"
             >
-              <div className="text-sm text-muted-foreground">Current: <span className="font-medium text-foreground">{addStockFor.quantity}</span></div>
-              <div className="space-y-2"><Label>Units to add</Label><Input name="add" type="number" min="1" required autoFocus /></div>
+              <div className="text-sm text-muted-foreground">Current: <span className="font-medium text-foreground">{addStockFor.quantity}</span> units</div>
+              <div className="space-y-2"><Label>Units brought in</Label><Input name="add" type="number" min="1" required autoFocus placeholder="e.g. 10 units of Sugar (Huletts)" /></div>
               <DialogFooter><Button type="submit" disabled={addStock.isPending}>Add to stock</Button></DialogFooter>
             </form>
           )}

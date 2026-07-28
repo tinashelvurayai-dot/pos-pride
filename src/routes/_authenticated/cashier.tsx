@@ -368,9 +368,8 @@ function CashierScreen() {
           ) : (
             <div className="grid gap-3 grid-cols-2 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
               {filtered.map((v) => {
-                const qty = v.stock?.quantity ?? 0;
                 const available = v.stock?.available !== false;
-                const isOut = !available || qty === 0;
+                const isOut = !available;
                 const image = v.image_url || v.product?.image_url;
                 return (
                   <div key={v.id} className="relative">
@@ -393,7 +392,7 @@ function CashierScreen() {
                         <div className="mt-0.5 truncate text-xs text-muted-foreground">{v.variant_name}{v.size ? ` - ${v.size}` : ""}</div>
                         <div className="mt-2 flex items-center justify-between">
                           <span className="text-base font-bold">{formatCurrency(v.price)}</span>
-                          {isOut ? <Badge variant="destructive">Out</Badge> : qty > 0 && qty <= 5 ? <Badge className="bg-amber-500 text-white">Low</Badge> : <span className="text-xs text-muted-foreground">{qty > 0 ? `${qty} left` : "In stock"}</span>}
+                          {isOut ? <Badge variant="destructive">Out</Badge> : <span className="text-xs text-muted-foreground">In stock</span>}
                         </div>
                       </div>
                     </button>

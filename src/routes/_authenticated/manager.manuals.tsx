@@ -33,7 +33,7 @@ function ManagerManualContent() {
       </section>
       <section>
         <h3 className="font-semibold text-base">5. Recording new stock received</h3>
-        <p className="text-muted-foreground">When a delivery arrives, open Stock, find the variant, press the <span className="font-medium">+</span> button and enter the number of <span className="font-medium">packets brought in</span>. The system adds that to the on-hand count. You do not need to count the whole shop — only what came in.</p>
+        <p className="text-muted-foreground">When a delivery arrives, open Stock, find the variant, press the <span className="font-medium">+</span> button and enter the number of <span className="font-medium">units brought in</span> (for example, <span className="italic">10 units of Sugar (Huletts)</span>). The system adds that to the on-hand count. You do not need to count the whole shop — only what came in.</p>
       </section>
       <section>
         <h3 className="font-semibold text-base">6. Staff</h3>
