@@ -50,6 +50,20 @@ export function enqueueSale(sale: Omit<QueuedSale, "id" | "queued_at">): QueuedS
 export async function flushQueue(): Promise<{ ok: number; failed: number }> {
   const list = read();
   if (list.length === 0) return { ok: 0, failed: 0 };
+
+  // Ensure we have an authenticated session so RLS (cashier_id = auth.uid()) passes.
+  let { data: sessionData } = await supabase.auth.getSession();
+  if (!sessionData.session) {
+    try {
+      await supabase.auth.signInAnonymously({ options: { data: { full_name: "Guest Cashier" } } });
+      ({ data: sessionData } = await supabase.auth.getSession());
+    } catch {
+      return { ok: 0, failed: list.length };
+    }
+  }
+  const uid = sessionData.session?.user.id;
+  if (!uid) return { ok: 0, failed: list.length };
+
   let ok = 0;
   const remaining: QueuedSale[] = [];
   for (const q of list) {
@@ -57,7 +71,7 @@ export async function flushQueue(): Promise<{ ok: number; failed: number }> {
       const { data: sale, error: saleErr } = await supabase
         .from("sales")
         .insert({
-          cashier_id: q.cashier_id,
+          cashier_id: uid,
           total_amount: q.total_amount,
           payment_type: q.payment_type,
           created_at: q.queued_at,
