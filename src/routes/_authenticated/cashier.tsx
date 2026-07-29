@@ -234,7 +234,6 @@ function CashierScreen() {
 
   const checkout = useMutation({
     mutationFn: async () => {
-      if (!session?.user.id) throw new Error("Not signed in");
       if (cart.length === 0) throw new Error("Cart is empty");
 
       const items = cart.map((l) => ({
@@ -244,10 +243,10 @@ function CashierScreen() {
         subtotal: Number(l.variant.price) * l.qty,
       }));
 
-      if (!online) {
-        // Queue for later sync
+      // Offline OR no session yet -> queue locally. Sync will attach a valid auth uid later.
+      if (!online || !session?.user.id) {
         enqueueSale({
-          cashier_id: session.user.id,
+          cashier_id: session?.user.id ?? "",
           total_amount: subtotal,
           payment_type: payment,
           items,
