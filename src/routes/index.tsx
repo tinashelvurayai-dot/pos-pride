@@ -1,5 +1,5 @@
-import { createFileRoute, Navigate, useNavigate } from "@tanstack/react-router";
-import { useRef, useState } from "react";
+import { createFileRoute, Navigate, useNavigate, useRouter } from "@tanstack/react-router";
+import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
