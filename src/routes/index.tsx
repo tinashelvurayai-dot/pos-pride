@@ -1,5 +1,5 @@
-import { createFileRoute, Navigate, useNavigate } from "@tanstack/react-router";
-import { useRef, useState } from "react";
+import { createFileRoute, Navigate, useNavigate, useRouter } from "@tanstack/react-router";
+import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,6 +20,7 @@ const CODE_2 = "POSTAT";
 
 function Landing() {
   const navigate = useNavigate();
+  const router = useRouter();
   const [guestBusy, setGuestBusy] = useState(false);
   const [gateOpen, setGateOpen] = useState(false);
   const [c1, setC1] = useState("");
@@ -28,22 +29,28 @@ function Landing() {
   const tapCountRef = useRef(0);
   const tapTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Preload authenticated route chunks so they work offline after first visit.
+  useEffect(() => {
+    void router.preloadRoute({ to: "/cashier" }).catch(() => {});
+    void router.preloadRoute({ to: "/manager" }).catch(() => {});
+  }, [router]);
+
   async function enterCashierMode() {
     setGuestBusy(true);
     try {
       localStorage.setItem("cashier_unlock", "true");
-      const { data } = await supabase.auth.getSession();
-      // Only attempt anonymous sign-in when online AND no session yet.
-      if (!data.session && typeof navigator !== "undefined" && navigator.onLine) {
-        const { error } = await supabase.auth.signInAnonymously({
-          options: { data: { full_name: "Guest Cashier" } },
-        });
-        if (error) {
-          // Non-fatal offline: cashier_unlock flag lets the route render.
-          console.warn("Cashier anon sign-in failed:", error.message);
-        }
-      }
+      // Navigate immediately — do not block on any network/auth work.
       navigate({ to: "/cashier" });
+      // Fire-and-forget anonymous sign-in when online for future syncs.
+      if (typeof navigator !== "undefined" && navigator.onLine) {
+        supabase.auth.getSession().then(({ data }) => {
+          if (!data.session) {
+            supabase.auth
+              .signInAnonymously({ options: { data: { full_name: "Guest Cashier" } } })
+              .catch((err) => console.warn("Cashier anon sign-in failed:", err?.message));
+          }
+        }).catch(() => {});
+      }
     } finally {
       setGuestBusy(false);
     }
