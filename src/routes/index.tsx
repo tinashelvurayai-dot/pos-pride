@@ -28,12 +28,28 @@ function Landing() {
   const [unlockBusy, setUnlockBusy] = useState(false);
   const tapCountRef = useRef(0);
   const tapTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
 
   // Preload authenticated route chunks so they work offline after first visit.
   useEffect(() => {
     void router.preloadRoute({ to: "/cashier" }).catch(() => {});
     void router.preloadRoute({ to: "/manager" }).catch(() => {});
   }, [router]);
+
+  // Scrolling to the bottom of the landing page opens the till.
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el || typeof IntersectionObserver === "undefined") return;
+    const io = new IntersectionObserver((entries) => {
+      if (entries.some((e) => e.isIntersecting)) {
+        io.disconnect();
+        void enterCashierMode();
+      }
+    }, { rootMargin: "0px 0px -10% 0px" });
+    io.observe(el);
+    return () => io.disconnect();
+  });
+
 
   async function enterCashierMode() {
     setGuestBusy(true);
