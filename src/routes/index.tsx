@@ -170,7 +170,15 @@ function Landing() {
             </div>
           ))}
         </section>
+
+        <section className="mt-24 flex flex-col items-center text-center">
+          <ShoppingCart className="h-8 w-8 animate-bounce text-primary" />
+          <p className="mt-3 text-sm font-medium">Keep scrolling to open Cashier Mode</p>
+          <p className="mt-1 text-xs text-muted-foreground">The till opens automatically - it works offline too.</p>
+          <div ref={sentinelRef} className="mt-24 h-1 w-full" />
+        </section>
       </main>
+
 
       <footer className="border-t border-border/60 py-8 text-center text-sm text-muted-foreground">
         © {new Date().getFullYear()} TillPoint. Built for retail.
