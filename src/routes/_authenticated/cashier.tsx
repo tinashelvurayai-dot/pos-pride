@@ -87,12 +87,14 @@ function CashierScreen() {
     },
   });
 
+  const hasSearch = search.trim().length > 0;
+
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim();
-    return list.filter((v) => {
-      if (!q) return true;
-      return v.variant_name.toLowerCase().includes(q) || v.product?.name.toLowerCase().includes(q) || v.product?.category?.toLowerCase().includes(q);
-    });
+    if (!q) return [] as Variant[];
+    return list.filter((v) =>
+      v.variant_name.toLowerCase().includes(q) || v.product?.name.toLowerCase().includes(q) || v.product?.category?.toLowerCase().includes(q)
+    );
   }, [search, list]);
 
   const subtotal = cart.reduce((s, l) => s + Number(l.variant.price) * l.qty, 0);
