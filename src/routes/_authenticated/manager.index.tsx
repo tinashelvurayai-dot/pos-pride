@@ -18,10 +18,8 @@ function SystemPriceBanner() {
     <section className="mb-8 overflow-hidden rounded-2xl border border-primary/30 bg-gradient-to-br from-blue-600 via-indigo-600 to-fuchsia-600 p-6 text-white shadow-[var(--shadow-elev-2)] md:p-8">
       <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
         <div className="flex-1">
-          <div className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1 text-xs font-semibold uppercase tracking-wider backdrop-blur">
-            <Sparkles className="h-3.5 w-3.5" /> Limited-time offer
-          </div>
-          <h2 className="mt-3 text-2xl font-bold md:text-3xl">System Price</h2>
+          <h2 className="text-2xl font-bold md:text-3xl">System Price</h2>
+
           <p className="mt-1 max-w-xl text-sm text-white/80">
             Full TillPoint Retail OS — variant inventory, dual-role dashboards, offline till, live analytics, AI forecasting and more. One-time price.
           </p>
