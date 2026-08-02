@@ -25,6 +25,7 @@ import { Route as AuthenticatedManagerForecastRouteImport } from './routes/_auth
 import { Route as AuthenticatedManagerExpensesRouteImport } from './routes/_authenticated/manager.expenses'
 import { Route as AuthenticatedManagerCashiersRouteImport } from './routes/_authenticated/manager.cashiers'
 import { Route as AuthenticatedManagerCashRouteImport } from './routes/_authenticated/manager.cash'
+import { Route as AuthenticatedManagerAlertsRouteImport } from './routes/_authenticated/manager.alerts'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -115,6 +116,12 @@ const AuthenticatedManagerCashRoute =
     path: '/cash',
     getParentRoute: () => AuthenticatedManagerRoute,
   } as any)
+const AuthenticatedManagerAlertsRoute =
+  AuthenticatedManagerAlertsRouteImport.update({
+    id: '/alerts',
+    path: '/alerts',
+    getParentRoute: () => AuthenticatedManagerRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -122,6 +129,7 @@ export interface FileRoutesByFullPath {
   '/cashier': typeof AuthenticatedCashierRoute
   '/manager': typeof AuthenticatedManagerRouteWithChildren
   '/orders': typeof AuthenticatedOrdersRoute
+  '/manager/alerts': typeof AuthenticatedManagerAlertsRoute
   '/manager/cash': typeof AuthenticatedManagerCashRoute
   '/manager/cashiers': typeof AuthenticatedManagerCashiersRoute
   '/manager/expenses': typeof AuthenticatedManagerExpensesRoute
@@ -138,6 +146,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/cashier': typeof AuthenticatedCashierRoute
   '/orders': typeof AuthenticatedOrdersRoute
+  '/manager/alerts': typeof AuthenticatedManagerAlertsRoute
   '/manager/cash': typeof AuthenticatedManagerCashRoute
   '/manager/cashiers': typeof AuthenticatedManagerCashiersRoute
   '/manager/expenses': typeof AuthenticatedManagerExpensesRoute
@@ -157,6 +166,7 @@ export interface FileRoutesById {
   '/_authenticated/cashier': typeof AuthenticatedCashierRoute
   '/_authenticated/manager': typeof AuthenticatedManagerRouteWithChildren
   '/_authenticated/orders': typeof AuthenticatedOrdersRoute
+  '/_authenticated/manager/alerts': typeof AuthenticatedManagerAlertsRoute
   '/_authenticated/manager/cash': typeof AuthenticatedManagerCashRoute
   '/_authenticated/manager/cashiers': typeof AuthenticatedManagerCashiersRoute
   '/_authenticated/manager/expenses': typeof AuthenticatedManagerExpensesRoute
@@ -176,6 +186,7 @@ export interface FileRouteTypes {
     | '/cashier'
     | '/manager'
     | '/orders'
+    | '/manager/alerts'
     | '/manager/cash'
     | '/manager/cashiers'
     | '/manager/expenses'
@@ -192,6 +203,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/cashier'
     | '/orders'
+    | '/manager/alerts'
     | '/manager/cash'
     | '/manager/cashiers'
     | '/manager/expenses'
@@ -210,6 +222,7 @@ export interface FileRouteTypes {
     | '/_authenticated/cashier'
     | '/_authenticated/manager'
     | '/_authenticated/orders'
+    | '/_authenticated/manager/alerts'
     | '/_authenticated/manager/cash'
     | '/_authenticated/manager/cashiers'
     | '/_authenticated/manager/expenses'
@@ -342,10 +355,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedManagerCashRouteImport
       parentRoute: typeof AuthenticatedManagerRoute
     }
+    '/_authenticated/manager/alerts': {
+      id: '/_authenticated/manager/alerts'
+      path: '/alerts'
+      fullPath: '/manager/alerts'
+      preLoaderRoute: typeof AuthenticatedManagerAlertsRouteImport
+      parentRoute: typeof AuthenticatedManagerRoute
+    }
   }
 }
 
 interface AuthenticatedManagerRouteChildren {
+  AuthenticatedManagerAlertsRoute: typeof AuthenticatedManagerAlertsRoute
   AuthenticatedManagerCashRoute: typeof AuthenticatedManagerCashRoute
   AuthenticatedManagerCashiersRoute: typeof AuthenticatedManagerCashiersRoute
   AuthenticatedManagerExpensesRoute: typeof AuthenticatedManagerExpensesRoute
@@ -359,6 +380,7 @@ interface AuthenticatedManagerRouteChildren {
 }
 
 const AuthenticatedManagerRouteChildren: AuthenticatedManagerRouteChildren = {
+  AuthenticatedManagerAlertsRoute: AuthenticatedManagerAlertsRoute,
   AuthenticatedManagerCashRoute: AuthenticatedManagerCashRoute,
   AuthenticatedManagerCashiersRoute: AuthenticatedManagerCashiersRoute,
   AuthenticatedManagerExpensesRoute: AuthenticatedManagerExpensesRoute,
