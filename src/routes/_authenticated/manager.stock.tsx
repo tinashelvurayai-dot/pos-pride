@@ -102,18 +102,6 @@ function StockPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const markAllAvailable = useMutation({
-    mutationFn: async () => {
-      const { data, error } = await supabase.rpc("mark_all_available" as any);
-      if (error) throw error;
-      return (data as unknown as number) ?? 0;
-    },
-    onSuccess: (n) => {
-      toast.success(`Marked ${n} item${n === 1 ? "" : "s"} as available`);
-      qc.invalidateQueries({ queryKey: ["stock"] });
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
 
   const rows = stock.data ?? [];
 
@@ -137,7 +125,7 @@ function StockPage() {
 
   return (
     <div className="p-4 sm:p-6 md:p-10">
-      <header className="mb-6 flex flex-wrap items-start justify-between gap-3">
+      <header className="mb-6">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Stock control</h1>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -145,13 +133,6 @@ function StockPage() {
             {flaggedOutCount > 0 && <> · <span className="font-semibold text-destructive">{flaggedOutCount} flagged out by cashiers</span></>}
           </p>
         </div>
-        <Button
-          onClick={() => { if (confirm("Mark every variant as Stock Available? Use this when the shop has been restocked.")) markAllAvailable.mutate(); }}
-          disabled={markAllAvailable.isPending}
-          className="gap-2"
-        >
-          <Boxes className="h-4 w-4" /> Stock Available (All)
-        </Button>
       </header>
 
       <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-4">
