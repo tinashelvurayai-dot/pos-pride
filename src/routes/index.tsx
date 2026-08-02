@@ -28,12 +28,28 @@ function Landing() {
   const [unlockBusy, setUnlockBusy] = useState(false);
   const tapCountRef = useRef(0);
   const tapTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
 
   // Preload authenticated route chunks so they work offline after first visit.
   useEffect(() => {
     void router.preloadRoute({ to: "/cashier" }).catch(() => {});
     void router.preloadRoute({ to: "/manager" }).catch(() => {});
   }, [router]);
+
+  // Scrolling to the bottom of the landing page opens the till.
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el || typeof IntersectionObserver === "undefined") return;
+    const io = new IntersectionObserver((entries) => {
+      if (entries.some((e) => e.isIntersecting)) {
+        io.disconnect();
+        void enterCashierMode();
+      }
+    }, { rootMargin: "0px 0px -10% 0px" });
+    io.observe(el);
+    return () => io.disconnect();
+  });
+
 
   async function enterCashierMode() {
     setGuestBusy(true);
@@ -141,14 +157,12 @@ function Landing() {
             A point-of-sale built for modern retail. Variant-level inventory, dual-role dashboards and real-time stock in one operating system for your shop floor and back office.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
-            <Button size="lg" className="h-12 px-6 text-base" onClick={enterCashierMode} disabled={guestBusy}>
-              <ShoppingCart className="mr-2 h-5 w-5" /> {guestBusy ? "Opening..." : "Enter Cashier Mode"}
-            </Button>
             <PWAInstallButton size="lg" variant="outline" className="h-12 px-6 text-base" label="Install this app" />
           </div>
           <p className="mt-3 text-xs text-muted-foreground">
-            Cashier Mode opens the till without a password - perfect for a shared counter device. Install the app so it appears on the home screen and keeps working offline.
+            {guestBusy ? "Opening the till..." : "Just scroll down to open the till - no password needed. Install the app so it appears on the home screen and keeps working offline."}
           </p>
+
           <div className="mt-8 flex flex-wrap items-center gap-6 text-xs text-muted-foreground">
             <div className="flex items-center gap-1.5"><ShieldCheck className="h-4 w-4 text-primary" /> Encrypted end-to-end</div>
             <div className="flex items-center gap-1.5"><Zap className="h-4 w-4 text-primary" /> Works offline at the till</div>
@@ -172,7 +186,15 @@ function Landing() {
             </div>
           ))}
         </section>
+
+        <section className="mt-24 flex flex-col items-center text-center">
+          <ShoppingCart className="h-8 w-8 animate-bounce text-primary" />
+          <p className="mt-3 text-sm font-medium">Keep scrolling to open Cashier Mode</p>
+          <p className="mt-1 text-xs text-muted-foreground">The till opens automatically - it works offline too.</p>
+          <div ref={sentinelRef} className="mt-24 h-1 w-full" />
+        </section>
       </main>
+
 
       <footer className="border-t border-border/60 py-8 text-center text-sm text-muted-foreground">
         © {new Date().getFullYear()} TillPoint. Built for retail.

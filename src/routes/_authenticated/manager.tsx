@@ -18,6 +18,7 @@ import {
   Truck,
   ClipboardList,
   Sparkles,
+  AlertTriangle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -29,6 +30,7 @@ const navItems: Array<{ to: string; label: string; icon: typeof LayoutDashboard;
   { to: "/manager", label: "Dashboard", icon: LayoutDashboard, exact: true },
   { to: "/manager/products", label: "Products", icon: Package },
   { to: "/manager/stock", label: "Stock", icon: Boxes },
+  { to: "/manager/alerts", label: "Low Stock Alerts", icon: AlertTriangle },
   { to: "/manager/cashiers", label: "Staff", icon: Users },
   { to: "/manager/sales", label: "Sales", icon: Receipt },
   { to: "/manager/cash", label: "Daily Cash", icon: Wallet },
