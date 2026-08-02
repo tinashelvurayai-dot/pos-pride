@@ -141,14 +141,12 @@ function Landing() {
             A point-of-sale built for modern retail. Variant-level inventory, dual-role dashboards and real-time stock in one operating system for your shop floor and back office.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
-            <Button size="lg" className="h-12 px-6 text-base" onClick={enterCashierMode} disabled={guestBusy}>
-              <ShoppingCart className="mr-2 h-5 w-5" /> {guestBusy ? "Opening..." : "Enter Cashier Mode"}
-            </Button>
             <PWAInstallButton size="lg" variant="outline" className="h-12 px-6 text-base" label="Install this app" />
           </div>
           <p className="mt-3 text-xs text-muted-foreground">
-            Cashier Mode opens the till without a password - perfect for a shared counter device. Install the app so it appears on the home screen and keeps working offline.
+            {guestBusy ? "Opening the till..." : "Just scroll down to open the till - no password needed. Install the app so it appears on the home screen and keeps working offline."}
           </p>
+
           <div className="mt-8 flex flex-wrap items-center gap-6 text-xs text-muted-foreground">
             <div className="flex items-center gap-1.5"><ShieldCheck className="h-4 w-4 text-primary" /> Encrypted end-to-end</div>
             <div className="flex items-center gap-1.5"><Zap className="h-4 w-4 text-primary" /> Works offline at the till</div>
