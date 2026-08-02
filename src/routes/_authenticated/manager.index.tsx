@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { formatCurrency, formatDate } from "@/lib/format";
-import { DollarSign, ShoppingBag, Package, AlertTriangle, Sparkles, BadgePercent } from "lucide-react";
+import { DollarSign, ShoppingBag, Package, AlertTriangle, BadgePercent } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/manager/")({
   component: ManagerDashboard,
