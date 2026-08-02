@@ -139,10 +139,6 @@ function CashierScreen() {
   }, [online, qc, syncOfflineQueue]);
 
   function addToCart(v: Variant) {
-    if (v.stock?.available === false) {
-      toast.error("Marked out of stock");
-      return;
-    }
     setCart((prev) => {
       const existing = prev.find((l) => l.variant.id === v.id);
       if (existing) return prev.map((l) => (l.variant.id === v.id ? { ...l, qty: l.qty + 1 } : l));
@@ -151,17 +147,6 @@ function CashierScreen() {
   }
 
 
-  const flagOut = useMutation({
-    mutationFn: async (variant_id: string) => {
-      const { error } = await supabase.rpc("flag_out_of_stock" as any, { _variant_id: variant_id } as any);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      toast.success("Flagged as out of stock");
-      qc.invalidateQueries({ queryKey: ["cashier", "variants"] });
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
   function changeQty(id: string, delta: number) {
     setCart((prev) => prev.flatMap((l) => {
       if (l.variant.id !== id) return [l];
