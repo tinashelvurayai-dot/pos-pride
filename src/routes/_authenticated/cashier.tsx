@@ -359,8 +359,12 @@ function CashierScreen() {
         </div>
 
         <div className="flex-1 overflow-auto p-4 sm:p-6">
-          {variants.isLoading && list.length === 0 ? (
-            <div className="text-muted-foreground">Loading...</div>
+          {!hasSearch ? (
+            <div className="flex h-full flex-col items-center justify-center text-center">
+              <Search className="h-10 w-10 text-muted-foreground" />
+              <p className="mt-3 text-sm font-medium">Search to find a product</p>
+              <p className="mt-1 text-xs text-muted-foreground">Products stay hidden until you type a name, variant or category.</p>
+            </div>
           ) : filtered.length === 0 ? (
             <div className="flex h-full flex-col items-center justify-center text-center">
               <PackageIcon className="h-10 w-10 text-muted-foreground" />
@@ -369,15 +373,12 @@ function CashierScreen() {
           ) : (
             <div className="grid gap-3 grid-cols-2 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
               {filtered.map((v) => {
-                const available = v.stock?.available !== false;
-                const isOut = !available;
                 const image = v.image_url || v.product?.image_url;
                 return (
                   <div key={v.id} className="relative">
                     <button
                       onClick={() => addToCart(v)}
-                      disabled={isOut}
-                      className="group w-full overflow-hidden rounded-xl border border-border bg-card text-left shadow-[var(--shadow-elev-1)] transition hover:-translate-y-0.5 hover:shadow-[var(--shadow-elev-2)] disabled:opacity-50 disabled:hover:translate-y-0"
+                      className="group w-full overflow-hidden rounded-xl border border-border bg-card text-left shadow-[var(--shadow-elev-1)] transition hover:-translate-y-0.5 hover:shadow-[var(--shadow-elev-2)]"
                     >
                       {!hideImages && (
                         <div className="aspect-square overflow-hidden bg-accent">
@@ -393,26 +394,17 @@ function CashierScreen() {
                         <div className="mt-0.5 truncate text-xs text-muted-foreground">{v.variant_name}{v.size ? ` - ${v.size}` : ""}</div>
                         <div className="mt-2 flex items-center justify-between">
                           <span className="text-base font-bold">{formatCurrency(v.price)}</span>
-                          {isOut ? <Badge variant="destructive">Out</Badge> : <span className="text-xs text-muted-foreground">In stock</span>}
+                          <span className="text-xs text-muted-foreground">In stock</span>
                         </div>
                       </div>
                     </button>
-                    {available && (
-                      <button
-                        onClick={(e) => { e.stopPropagation(); if (confirm(`Flag "${v.product?.name}" as out of stock?`)) flagOut.mutate(v.id); }}
-                        disabled={!online || flagOut.isPending}
-                        className="absolute right-2 top-2 rounded-md bg-white/95 px-2 py-1 text-[10px] font-semibold text-destructive shadow ring-1 ring-destructive/30 hover:bg-destructive hover:text-white disabled:opacity-40"
-                        title={online ? "Flag out of stock" : "Requires connection"}
-                      >
-                        Out of Stock
-                      </button>
-                    )}
                   </div>
                 );
               })}
             </div>
           )}
         </div>
+
       </div>
 
       <aside className="flex flex-col border-t border-border bg-card lg:border-l lg:border-t-0">
