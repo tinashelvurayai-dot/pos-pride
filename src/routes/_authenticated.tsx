@@ -23,7 +23,7 @@ function AuthGate() {
   // Offline / unlocked-by-code path: don't wait for network auth.
   if (unlocked) return <Outlet />;
   if (loading) {
-    return <div className="flex min-h-screen items-center justify-center text-muted-foreground">Loading…</div>;
+    return <div className="flex min-h-screen items-center justify-center text-muted-foreground">Loading...</div>;
   }
   if (!session) return <Navigate to="/" />;
   return <Outlet />;
