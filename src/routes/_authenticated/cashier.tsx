@@ -13,7 +13,7 @@ import { SignOutButton } from "@/components/sign-out-button";
 import { BrandLogo } from "@/components/brand-logo";
 import { toast } from "sonner";
 import { formatCurrency } from "@/lib/format";
-import { ShoppingCart, Search, Trash2, Plus, Minus, Package as PackageIcon, Wifi, WifiOff, BookOpen, CloudUpload, ClipboardList, HelpCircle, RefreshCw, CheckCircle2, AlertTriangle, X } from "lucide-react";
+import { ShoppingCart, Search, Trash2, Plus, Minus, Package as PackageIcon, BookOpen, ClipboardList, HelpCircle, RefreshCw, CheckCircle2, AlertTriangle, X } from "lucide-react";
 import { enqueueSale, flushQueue, getQueue } from "@/lib/offline-queue";
 import { IDB_KEYS, idbGet, idbSet } from "@/lib/offline-db";
 import { SyncIndicator } from "@/components/sync-indicator";
