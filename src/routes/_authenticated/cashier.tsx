@@ -294,14 +294,7 @@ function CashierScreen() {
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            {queuedCount > 0 && (
-              <Badge className="gap-1 bg-blue-600 text-white"><CloudUpload className="h-3 w-3" /> {queuedCount} pending</Badge>
-            )}
-            {online ? (
-              <Badge variant="outline" className="gap-1 border-blue-300 text-blue-700"><Wifi className="h-3 w-3" /> Online</Badge>
-            ) : (
-              <Badge variant="destructive" className="gap-1"><WifiOff className="h-3 w-3" /> Offline</Badge>
-            )}
+            <SyncIndicator />
             <Button variant="outline" size="sm" onClick={() => syncOfflineQueue(true)} disabled={!online || syncStatus === "syncing"}>
               <RefreshCw className={`mr-2 h-4 w-4 ${syncStatus === "syncing" ? "animate-spin" : ""}`} /> Sync
             </Button>
