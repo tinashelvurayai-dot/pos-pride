@@ -66,16 +66,23 @@ function CashierScreen() {
       if (error) throw error;
       const list = (data as unknown as Variant[]).filter((v) => v.product);
       try { localStorage.setItem(OFFLINE_CACHE_KEY, JSON.stringify(list)); } catch { /* noop */ }
+      void idbSet(IDB_KEYS.catalog, list);
       return list;
     },
   });
 
+  const [idbCatalog, setIdbCatalog] = useState<Variant[]>([]);
+  useEffect(() => {
+    void idbGet<Variant[]>(IDB_KEYS.catalog).then((c) => { if (c?.length) setIdbCatalog(c); });
+  }, []);
+
   const offlineList = useMemo<Variant[]>(() => {
     try {
       const raw = localStorage.getItem(OFFLINE_CACHE_KEY);
-      return raw ? (JSON.parse(raw) as Variant[]) : [];
-    } catch { return []; }
-  }, [variants.data]);
+      const parsed = raw ? (JSON.parse(raw) as Variant[]) : [];
+      return parsed.length ? parsed : idbCatalog;
+    } catch { return idbCatalog; }
+  }, [variants.data, idbCatalog]);
 
   const list: Variant[] = variants.data ?? offlineList;
 
