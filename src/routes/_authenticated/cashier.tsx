@@ -239,8 +239,7 @@ function CashierScreen() {
         subtotal: Number(l.variant.price) * l.qty,
       }));
 
-      // Offline OR no session yet -> queue locally. Sync will attach a valid auth uid later.
-      if (!online || !session?.user.id) {
+      const queueLocally = () => {
         enqueueSale({
           cashier_id: session?.user.id ?? "",
           total_amount: subtotal,
@@ -250,18 +249,37 @@ function CashierScreen() {
         setQueuedCount(getQueue().length);
         setSyncStatus("idle");
         return { queued: true as const };
+      };
+
+      // Offline OR no session yet -> queue locally. Sync will attach a valid auth uid later.
+      if (!online || !session?.user.id) return queueLocally();
+
+      // Online path, but never let a dead/slow connection hang the till.
+      const withTimeout = <T,>(p: PromiseLike<T>, ms = 6000) =>
+        Promise.race([
+          Promise.resolve(p),
+          new Promise<never>((_, rej) => setTimeout(() => rej(new Error("timeout")), ms)),
+        ]);
+
+      try {
+        const { data: sale, error: saleErr } = await withTimeout(
+          supabase.from("sales").insert({
+            cashier_id: session.user.id,
+            total_amount: subtotal,
+            payment_type: payment,
+          }).select("id").single(),
+        );
+        if (saleErr) throw saleErr;
+
+        const { error: itemsErr } = await withTimeout(
+          supabase.from("sale_items").insert(items.map((i) => ({ ...i, sale_id: sale.id }))),
+        );
+        if (itemsErr) throw itemsErr;
+        return { queued: false as const };
+      } catch {
+        // Network failed or timed out -> keep the sale safe locally.
+        return queueLocally();
       }
-
-      const { data: sale, error: saleErr } = await supabase.from("sales").insert({
-        cashier_id: session.user.id,
-        total_amount: subtotal,
-        payment_type: payment,
-      }).select("id").single();
-      if (saleErr) throw saleErr;
-
-      const { error: itemsErr } = await supabase.from("sale_items").insert(items.map((i) => ({ ...i, sale_id: sale.id })));
-      if (itemsErr) throw itemsErr;
-      return { queued: false as const };
     },
     onMutate: () => setCheckingOut(true),
     onSettled: () => setCheckingOut(false),
@@ -272,8 +290,9 @@ function CashierScreen() {
         toast.success(`Sale of ${formatCurrency(subtotal)} recorded`);
       }
       setCart([]);
-      qc.invalidateQueries({ queryKey: ["cashier"] });
+      if (!res?.queued) qc.invalidateQueries({ queryKey: ["cashier"] });
     },
+
     onError: (e: Error) => toast.error(e.message),
   });
 
