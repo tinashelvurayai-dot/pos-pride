@@ -14,7 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { registerPWA } from "@/lib/pwa-register";
 import { PWAStatus } from "@/components/pwa-status";
-import { flushQueue } from "@/lib/offline-queue";
+import { startSyncManager, runSync } from "@/lib/sync-manager";
 
 function NotFoundComponent() {
   return (
@@ -96,7 +96,8 @@ function RootComponent() {
 
   useEffect(() => {
     registerPWA((doReload) => setReload(() => doReload));
-    const onOnline = () => { void flushQueue(); };
+    startSyncManager();
+    const onOnline = () => { void runSync(); };
     window.addEventListener("online", onOnline);
     const { data: sub } = supabase.auth.onAuthStateChange((event) => {
       if (event !== "SIGNED_IN" && event !== "SIGNED_OUT" && event !== "USER_UPDATED") return;

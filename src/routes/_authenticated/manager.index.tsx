@@ -4,6 +4,23 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { DollarSign, ShoppingBag, Package, AlertTriangle, BadgePercent } from "lucide-react";
+import { SyncIndicator, useSyncState } from "@/components/sync-indicator";
+
+function PendingSyncNotice() {
+  const { pending, lastSync } = useSyncState();
+  return (
+    <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-card px-4 py-3">
+      <SyncIndicator />
+      <div className="text-xs text-muted-foreground">
+        {pending > 0
+          ? `${pending} offline sale${pending === 1 ? "" : "s"} still waiting to upload.`
+          : lastSync
+            ? `All sales uploaded · last sync ${new Date(lastSync).toLocaleTimeString()}`
+            : "All sales uploaded."}
+      </div>
+    </div>
+  );
+}
 
 export const Route = createFileRoute("/_authenticated/manager/")({
   component: ManagerDashboard,
@@ -79,6 +96,8 @@ function ManagerDashboard() {
         <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
         <p className="mt-1 text-sm text-muted-foreground">Live snapshot of your shop.</p>
       </header>
+
+      <PendingSyncNotice />
 
       <SystemPriceBanner />
 

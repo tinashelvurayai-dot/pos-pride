@@ -1,5 +1,9 @@
-// Offline sales queue: persists checkouts to localStorage and flushes them when back online.
+// Offline sales queue.
+// Writes go to localStorage (synchronous, instantly readable by the UI) and are
+// mirrored into IndexedDB for durability. On boot we hydrate from IndexedDB in
+// case localStorage was cleared by the browser.
 import { supabase } from "@/integrations/supabase/client";
+import { IDB_KEYS, idbGet, idbSet } from "@/lib/offline-db";
 
 const QUEUE_KEY = "tillpoint.offline-sales.v1";
 
@@ -19,6 +23,20 @@ export type QueuedSale = {
   queued_at: string;
 };
 
+type Listener = (count: number) => void;
+const listeners = new Set<Listener>();
+
+export function subscribeQueue(fn: Listener): () => void {
+  listeners.add(fn);
+  return () => listeners.delete(fn);
+}
+
+function notify(list: QueuedSale[]) {
+  for (const fn of listeners) {
+    try { fn(list.length); } catch { /* noop */ }
+  }
+}
+
 function read(): QueuedSale[] {
   try {
     const raw = localStorage.getItem(QUEUE_KEY);
@@ -29,10 +47,24 @@ function read(): QueuedSale[] {
 }
 function write(list: QueuedSale[]) {
   try { localStorage.setItem(QUEUE_KEY, JSON.stringify(list)); } catch { /* noop */ }
+  void idbSet(IDB_KEYS.sales, list);
+  notify(list);
 }
 
 export function getQueue(): QueuedSale[] {
   return read();
+}
+
+/** Restore the queue from IndexedDB when localStorage lost it (called once at boot). */
+export async function hydrateQueueFromIdb(): Promise<number> {
+  const local = read();
+  const durable = (await idbGet<QueuedSale[]>(IDB_KEYS.sales)) ?? [];
+  const byId = new Map<string, QueuedSale>();
+  for (const s of [...durable, ...local]) byId.set(s.id, s);
+  const merged = [...byId.values()].sort((a, b) => a.queued_at.localeCompare(b.queued_at));
+  if (merged.length !== local.length) write(merged);
+  else notify(merged);
+  return merged.length;
 }
 
 export function enqueueSale(sale: Omit<QueuedSale, "id" | "queued_at">): QueuedSale {

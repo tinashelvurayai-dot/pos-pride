@@ -6,15 +6,17 @@ import { useAuth } from "@/hooks/use-auth";
 import { useOnline } from "@/hooks/use-online";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { SignOutButton } from "@/components/sign-out-button";
 import { BrandLogo } from "@/components/brand-logo";
 import { toast } from "sonner";
 import { formatCurrency } from "@/lib/format";
-import { ShoppingCart, Search, Trash2, Plus, Minus, Package as PackageIcon, Wifi, WifiOff, BookOpen, CloudUpload, ClipboardList, HelpCircle, RefreshCw, CheckCircle2, AlertTriangle, X } from "lucide-react";
+import { ShoppingCart, Search, Trash2, Plus, Minus, Package as PackageIcon, BookOpen, ClipboardList, HelpCircle, RefreshCw, CheckCircle2, AlertTriangle, X } from "lucide-react";
 import { enqueueSale, flushQueue, getQueue } from "@/lib/offline-queue";
+import { IDB_KEYS, idbGet, idbSet } from "@/lib/offline-db";
+import { SyncIndicator } from "@/components/sync-indicator";
 import { VoiceMicButton } from "@/components/voice-mic-button";
 import { PWAInstallButton } from "@/components/pwa-install-button";
 import { useHideImages } from "@/hooks/use-hide-images";
@@ -66,16 +68,23 @@ function CashierScreen() {
       if (error) throw error;
       const list = (data as unknown as Variant[]).filter((v) => v.product);
       try { localStorage.setItem(OFFLINE_CACHE_KEY, JSON.stringify(list)); } catch { /* noop */ }
+      void idbSet(IDB_KEYS.catalog, list);
       return list;
     },
   });
 
+  const [idbCatalog, setIdbCatalog] = useState<Variant[]>([]);
+  useEffect(() => {
+    void idbGet<Variant[]>(IDB_KEYS.catalog).then((c) => { if (c?.length) setIdbCatalog(c); });
+  }, []);
+
   const offlineList = useMemo<Variant[]>(() => {
     try {
       const raw = localStorage.getItem(OFFLINE_CACHE_KEY);
-      return raw ? (JSON.parse(raw) as Variant[]) : [];
-    } catch { return []; }
-  }, [variants.data]);
+      const parsed = raw ? (JSON.parse(raw) as Variant[]) : [];
+      return parsed.length ? parsed : idbCatalog;
+    } catch { return idbCatalog; }
+  }, [variants.data, idbCatalog]);
 
   const list: Variant[] = variants.data ?? offlineList;
 
@@ -285,14 +294,7 @@ function CashierScreen() {
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            {queuedCount > 0 && (
-              <Badge className="gap-1 bg-blue-600 text-white"><CloudUpload className="h-3 w-3" /> {queuedCount} pending</Badge>
-            )}
-            {online ? (
-              <Badge variant="outline" className="gap-1 border-blue-300 text-blue-700"><Wifi className="h-3 w-3" /> Online</Badge>
-            ) : (
-              <Badge variant="destructive" className="gap-1"><WifiOff className="h-3 w-3" /> Offline</Badge>
-            )}
+            <SyncIndicator />
             <Button variant="outline" size="sm" onClick={() => syncOfflineQueue(true)} disabled={!online || syncStatus === "syncing"}>
               <RefreshCw className={`mr-2 h-4 w-4 ${syncStatus === "syncing" ? "animate-spin" : ""}`} /> Sync
             </Button>
