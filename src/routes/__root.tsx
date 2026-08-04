@@ -96,7 +96,8 @@ function RootComponent() {
 
   useEffect(() => {
     registerPWA((doReload) => setReload(() => doReload));
-    const onOnline = () => { void flushQueue(); };
+    startSyncManager();
+    const onOnline = () => { void runSync(); };
     window.addEventListener("online", onOnline);
     const { data: sub } = supabase.auth.onAuthStateChange((event) => {
       if (event !== "SIGNED_IN" && event !== "SIGNED_OUT" && event !== "USER_UPDATED") return;
