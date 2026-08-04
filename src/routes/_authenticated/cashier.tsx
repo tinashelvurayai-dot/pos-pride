@@ -6,7 +6,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useOnline } from "@/hooks/use-online";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { SignOutButton } from "@/components/sign-out-button";
