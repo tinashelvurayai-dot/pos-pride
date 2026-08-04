@@ -14,7 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { registerPWA } from "@/lib/pwa-register";
 import { PWAStatus } from "@/components/pwa-status";
-import { flushQueue } from "@/lib/offline-queue";
+import { startSyncManager, runSync } from "@/lib/sync-manager";
 
 function NotFoundComponent() {
   return (
