@@ -1,5 +1,7 @@
 // Global background sync: retries queued sales whenever the device is online.
 import { flushQueue, getQueue, hydrateQueueFromIdb, subscribeQueue } from "@/lib/offline-queue";
+import { hydrateLogFromIdb } from "@/lib/transaction-log";
+
 
 let started = false;
 let syncing = false;
@@ -54,6 +56,8 @@ export function startSyncManager() {
   started = true;
 
   subscribeQueue((count) => emit({ pending: count }));
+  void hydrateLogFromIdb();
+
 
   void hydrateQueueFromIdb().then((count) => {
     emit({ pending: count });

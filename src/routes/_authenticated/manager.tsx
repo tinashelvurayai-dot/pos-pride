@@ -36,7 +36,9 @@ const navItems: Array<{ to: string; label: string; icon: typeof LayoutDashboard;
   { to: "/manager/expenses", label: "Expenses & Profit", icon: TrendingUp },
   { to: "/manager/suppliers", label: "Suppliers & PO", icon: Truck },
   { to: "/manager/forecast", label: "AI Forecast", icon: Sparkles },
+  { to: "/transactions", label: "Transaction Log", icon: ClipboardList },
   { to: "/orders", label: "Orders", icon: ClipboardList },
+
   { to: "/manager/manuals", label: "Manuals", icon: BookOpen },
 ];
 
