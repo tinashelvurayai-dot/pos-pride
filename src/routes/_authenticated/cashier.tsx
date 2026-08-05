@@ -238,13 +238,30 @@ function CashierScreen() {
         unit_price: Number(l.variant.price),
         subtotal: Number(l.variant.price) * l.qty,
       }));
+      const logItems = cart.map((l) => ({
+        name: l.variant.product?.name ?? l.variant.variant_name,
+        variant: l.variant.variant_name,
+        quantity: l.qty,
+        unit_price: Number(l.variant.price),
+        subtotal: Number(l.variant.price) * l.qty,
+      }));
+      const cashierName = profile?.full_name ?? "Cashier";
 
       const queueLocally = () => {
-        enqueueSale({
+        const entry = enqueueSale({
           cashier_id: session?.user.id ?? "",
           total_amount: subtotal,
           payment_type: payment,
           items,
+        });
+        appendLog({
+          id: entry.id,
+          created_at: entry.queued_at,
+          total: subtotal,
+          payment_type: payment,
+          cashier_name: cashierName,
+          items: logItems,
+          status: "queued",
         });
         setQueuedCount(getQueue().length);
         setSyncStatus("idle");
@@ -252,7 +269,8 @@ function CashierScreen() {
       };
 
       // Offline OR no session yet -> queue locally. Sync will attach a valid auth uid later.
-      if (!online || !session?.user.id) return queueLocally();
+      const reallyOnline = typeof navigator !== "undefined" ? navigator.onLine : online;
+      if (!reallyOnline || !session?.user.id) return queueLocally();
 
       // Online path, but never let a dead/slow connection hang the till.
       const withTimeout = <T,>(p: PromiseLike<T>, ms = 6000) =>
@@ -275,6 +293,14 @@ function CashierScreen() {
           supabase.from("sale_items").insert(items.map((i) => ({ ...i, sale_id: sale.id }))),
         );
         if (itemsErr) throw itemsErr;
+        appendLog({
+          id: sale.id,
+          total: subtotal,
+          payment_type: payment,
+          cashier_name: cashierName,
+          items: logItems,
+          status: "synced",
+        });
         return { queued: false as const };
       } catch {
         // Network failed or timed out -> keep the sale safe locally.
@@ -285,7 +311,7 @@ function CashierScreen() {
     onSettled: () => setCheckingOut(false),
     onSuccess: (res) => {
       if (res?.queued) {
-        toast.success(`Sale queued offline - will sync when online (${formatCurrency(subtotal)})`);
+        toast.success(`Sale saved on this device - will sync when online (${formatCurrency(subtotal)})`);
       } else {
         toast.success(`Sale of ${formatCurrency(subtotal)} recorded`);
       }
@@ -295,6 +321,7 @@ function CashierScreen() {
 
     onError: (e: Error) => toast.error(e.message),
   });
+
 
   if (loading) return <div className="flex min-h-screen items-center justify-center text-muted-foreground">Loading...</div>;
   if (role === "manager") return <Navigate to="/manager" />;
