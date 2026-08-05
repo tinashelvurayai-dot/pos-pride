@@ -116,9 +116,11 @@ export async function flushQueue(): Promise<{ ok: number; failed: number }> {
       const items = q.items.map((i) => ({ ...i, sale_id: sale.id }));
       const { error: itemsErr } = await supabase.from("sale_items").insert(items);
       if (itemsErr) throw itemsErr;
+      markLogStatus(q.id, "synced");
       ok++;
     } catch {
       remaining.push(q);
+
     }
   }
   write(remaining);
