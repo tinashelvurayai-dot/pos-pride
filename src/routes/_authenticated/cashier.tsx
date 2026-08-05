@@ -351,11 +351,17 @@ function CashierScreen() {
               <HelpCircle className="mr-2 h-4 w-4" /> Voice help
             </Button>
             <PWAInstallButton variant="outline" size="sm" label="Install" />
+            <Link to="/transactions">
+              <Button variant="outline" size="sm">
+                <ClipboardList className="mr-2 h-4 w-4" /> Transaction log
+              </Button>
+            </Link>
             <Link to="/orders">
               <Button variant="outline" size="sm">
                 <ClipboardList className="mr-2 h-4 w-4" /> Orders
               </Button>
             </Link>
+
             {showManual && (
               <Button variant="outline" size="sm" onClick={() => setManualOpen(true)}>
                 <BookOpen className="mr-2 h-4 w-4" /> Manual
@@ -464,7 +470,7 @@ function CashierScreen() {
       <aside className="flex flex-col border-t border-border bg-card lg:border-l lg:border-t-0">
         <div className="border-b border-border px-4 py-3 sm:px-6 sm:py-4">
           <h2 className="text-lg font-bold">Current sale</h2>
-          <p className="text-xs text-muted-foreground">{cart.length} line{cart.length === 1 ? "" : "s"}</p>
+          <p className="text-xs text-muted-foreground">{cart.length} line{cart.length === 1 ? "" : "s"} · {cart.reduce((s, l) => s + l.qty, 0)} item{cart.reduce((s, l) => s + l.qty, 0) === 1 ? "" : "s"}</p>
         </div>
         <div className="flex-1 overflow-auto px-4 py-3">
           {cart.length === 0 ? (
@@ -473,29 +479,41 @@ function CashierScreen() {
               <p className="mt-3 text-sm text-muted-foreground">Tap a product to start.</p>
             </div>
           ) : (
-            <ul className="space-y-2">
-              {cart.map((l) => (
-                <li key={l.variant.id} className="rounded-lg border border-border p-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <div className="truncate font-medium">{l.variant.product?.name}</div>
-                      <div className="truncate text-xs text-muted-foreground">{l.variant.variant_name}</div>
+            <div className="rounded-xl border border-dashed border-border bg-[hsl(var(--card))] p-4 font-mono text-[13px] shadow-[var(--shadow-elev-1)]">
+              <div className="text-center">
+                <div className="text-sm font-bold tracking-[0.18em] uppercase">Receipt</div>
+                <div className="text-[11px] text-muted-foreground">{new Date().toLocaleString()}</div>
+              </div>
+              <div className="my-3 border-t border-dashed border-border" />
+              <ul className="space-y-3">
+                {cart.map((l) => (
+                  <li key={l.variant.id}>
+                    <div className="flex items-baseline justify-between gap-2">
+                      <span className="min-w-0 truncate font-semibold">{l.variant.product?.name}</span>
+                      <span className="tabular-nums font-semibold">{formatCurrency(Number(l.variant.price) * l.qty)}</span>
                     </div>
-                    <button onClick={() => removeLine(l.variant.id)}><Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" /></button>
-                  </div>
-                  <div className="mt-2 flex items-center justify-between">
-                    <div className="inline-flex items-center gap-1 rounded-md border border-border">
-                      <button onClick={() => changeQty(l.variant.id, -1)} className="grid h-8 w-8 place-items-center hover:bg-accent"><Minus className="h-3.5 w-3.5" /></button>
-                      <span className="w-8 text-center text-sm font-medium">{l.qty}</span>
-                      <button onClick={() => changeQty(l.variant.id, 1)} className="grid h-8 w-8 place-items-center hover:bg-accent"><Plus className="h-3.5 w-3.5" /></button>
+                    <div className="flex items-center justify-between gap-2 text-[11px] text-muted-foreground">
+                      <span className="min-w-0 truncate">
+                        {l.variant.variant_name}{l.variant.size ? ` - ${l.variant.size}` : ""} · {l.qty} × {formatCurrency(l.variant.price)}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <button aria-label="Decrease" onClick={() => changeQty(l.variant.id, -1)} className="grid h-6 w-6 place-items-center rounded border border-border hover:bg-accent"><Minus className="h-3 w-3" /></button>
+                        <button aria-label="Increase" onClick={() => changeQty(l.variant.id, 1)} className="grid h-6 w-6 place-items-center rounded border border-border hover:bg-accent"><Plus className="h-3 w-3" /></button>
+                        <button aria-label="Remove" onClick={() => removeLine(l.variant.id)} className="grid h-6 w-6 place-items-center rounded border border-border hover:bg-destructive/10 hover:text-destructive"><Trash2 className="h-3 w-3" /></button>
+                      </span>
                     </div>
-                    <div className="text-sm font-semibold">{formatCurrency(Number(l.variant.price) * l.qty)}</div>
-                  </div>
-                </li>
-              ))}
-            </ul>
+                  </li>
+                ))}
+              </ul>
+              <div className="my-3 border-t border-dashed border-border" />
+              <div className="flex items-baseline justify-between text-sm font-bold">
+                <span>TOTAL</span>
+                <span className="tabular-nums">{formatCurrency(subtotal)}</span>
+              </div>
+            </div>
           )}
         </div>
+
         <div className="border-t border-border p-4 space-y-3">
           <div className="space-y-1">
             <label className="text-xs font-medium text-muted-foreground">Payment</label>
