@@ -4,6 +4,8 @@
 // case localStorage was cleared by the browser.
 import { supabase } from "@/integrations/supabase/client";
 import { IDB_KEYS, idbGet, idbSet } from "@/lib/offline-db";
+import { markLogStatus } from "@/lib/transaction-log";
+
 
 const QUEUE_KEY = "tillpoint.offline-sales.v1";
 
