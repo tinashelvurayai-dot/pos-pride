@@ -56,6 +56,8 @@ export function startSyncManager() {
   started = true;
 
   subscribeQueue((count) => emit({ pending: count }));
+  void hydrateLogFromIdb();
+
 
   void hydrateQueueFromIdb().then((count) => {
     emit({ pending: count });
