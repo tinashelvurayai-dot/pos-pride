@@ -1,4 +1,4 @@
-import { createFileRoute, Navigate, Link } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -48,7 +48,7 @@ type SyncStatus = "idle" | "syncing" | "synced" | "failed";
 const OFFLINE_CACHE_KEY = "tillpoint.cashier.catalog.v1";
 
 function CashierScreen() {
-  const { role, profile, session, loading } = useAuth();
+  const { profile, session, loading } = useAuth();
   const qc = useQueryClient();
   const online = useOnline();
   const [hideImages] = useHideImages();
