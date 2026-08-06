@@ -19,8 +19,11 @@ import {
   ClipboardList,
   Sparkles,
   AlertTriangle,
+  Lock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { isManagerMode } from "@/lib/session-mode";
+
 
 export const Route = createFileRoute("/_authenticated/manager")({
   component: ManagerLayout,
