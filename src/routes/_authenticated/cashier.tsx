@@ -81,7 +81,11 @@ function CashierScreen() {
   const [idbCatalog, setIdbCatalog] = useState<Variant[]>([]);
   useEffect(() => {
     void idbGet<Variant[]>(IDB_KEYS.catalog).then((c) => { if (c?.length) setIdbCatalog(c); });
+    // Opening the till puts this device in cashier mode (manager rights drop away).
+    setMode("cashier");
+    void hydrateStockDeltas();
   }, []);
+
 
   const offlineList = useMemo<Variant[]>(() => {
     try {
