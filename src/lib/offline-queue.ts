@@ -5,6 +5,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { IDB_KEYS, idbGet, idbSet } from "@/lib/offline-db";
 import { markLogStatus } from "@/lib/transaction-log";
+import { clearSaleDelta } from "@/lib/local-stock";
 
 
 const QUEUE_KEY = "tillpoint.offline-sales.v1";
@@ -17,13 +18,15 @@ export type QueuedSaleItem = {
 };
 
 export type QueuedSale = {
-  id: string; // client-generated
+  id: string; // client-generated, also used as the server idempotency key
   cashier_id: string;
+  cashier_name?: string;
   total_amount: number;
   payment_type: "cash" | "mobile" | "card" | "other";
   items: QueuedSaleItem[];
   queued_at: string;
 };
+
 
 type Listener = (count: number) => void;
 const listeners = new Set<Listener>();
