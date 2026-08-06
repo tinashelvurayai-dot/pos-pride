@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { useAuth } from "@/hooks/use-auth";
+import { isManagerMode } from "@/lib/session-mode";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -66,7 +66,7 @@ function TransactionsPage() {
       await navigator.clipboard.writeText(text);
       toast.success("Transaction log copied to clipboard");
     } catch {
-      toast.error("Clipboard blocked — use Download CSV instead");
+      toast.error("Clipboard blocked - use Download CSV instead");
     }
   }
 

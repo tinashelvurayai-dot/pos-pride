@@ -28,12 +28,12 @@ function ManagerManualContent() {
         <p className="text-muted-foreground">Create products with base info, take a product photo, or upload an image from the device. Each product can have multiple variants - size, flavour or colour, price, SKU, and initial stock. Managers can edit prices and details later.</p>
       </section>
       <section>
-        <h3 className="font-semibold text-base">4. Stock — how it works now</h3>
-        <p className="text-muted-foreground">Every product is treated as <span className="font-medium">In Stock by default</span>. Cashiers can sell any item without a quantity check. When a cashier notices an item has run out on the shelf, they press <span className="font-medium">Out of Stock</span> on that product tile — it is instantly flagged and blocked from further sales. Managers can un-flag one item with <span className="font-medium">Stock Available</span> or reset everything with <span className="font-medium">Stock Available (All)</span> after a restock.</p>
+        <h3 className="font-semibold text-base">4. Stock - how it works now</h3>
+        <p className="text-muted-foreground">Every product is treated as <span className="font-medium">In Stock by default</span>. Cashiers can sell any item without a quantity check. When a cashier notices an item has run out on the shelf, they press <span className="font-medium">Out of Stock</span> on that product tile - it is instantly flagged and blocked from further sales. Managers can un-flag one item with <span className="font-medium">Stock Available</span> or reset everything with <span className="font-medium">Stock Available (All)</span> after a restock.</p>
       </section>
       <section>
         <h3 className="font-semibold text-base">5. Recording new stock received</h3>
-        <p className="text-muted-foreground">When a delivery arrives, open Stock, find the variant, press the <span className="font-medium">+</span> button and enter the number of <span className="font-medium">units brought in</span> (for example, <span className="italic">10 units of Sugar (Huletts)</span>). The system adds that to the on-hand count. You do not need to count the whole shop — only what came in.</p>
+        <p className="text-muted-foreground">When a delivery arrives, open Stock, find the variant, press the <span className="font-medium">+</span> button and enter the number of <span className="font-medium">units brought in</span> (for example, <span className="italic">10 units of Sugar (Huletts)</span>). The system adds that to the on-hand count. You do not need to count the whole shop - only what came in.</p>
       </section>
       <section>
         <h3 className="font-semibold text-base">6. Staff</h3>
@@ -53,7 +53,7 @@ function ManagerManualContent() {
       </section>
       <section>
         <h3 className="font-semibold text-base">10. Offline behaviour and installation</h3>
-        <p className="text-muted-foreground">Install from Chrome so the app appears alongside other device apps. Once the cashier dashboard has loaded once online, cashiers can sell fully offline — sales queue on the device and sync automatically when the connection returns.</p>
+        <p className="text-muted-foreground">Install from Chrome so the app appears alongside other device apps. Once the cashier dashboard has loaded once online, cashiers can sell fully offline - sales queue on the device and sync automatically when the connection returns.</p>
       </section>
       <section>
         <h3 className="font-semibold text-base">11. Voice commands</h3>

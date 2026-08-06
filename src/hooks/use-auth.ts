@@ -43,7 +43,7 @@ export function useAuth(): AuthState {
         setProfile(p as AuthProfile | null);
         setRole((r?.role as AppRole) ?? null);
       } catch {
-        // Offline or transient failure — resolve loading so gated routes render.
+        // Offline or transient failure - resolve loading so gated routes render.
         if (cancelled) return;
       } finally {
         if (!cancelled) setLoading(false);
