@@ -10,13 +10,13 @@ import { PWAInstallButton } from "@/components/pwa-install-button";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { ShoppingCart, Package, BarChart3, Users, ShieldCheck, Zap } from "lucide-react";
+import { verifyManagerCodes } from "@/lib/manager-codes";
+import { getMode, setMode } from "@/lib/session-mode";
 
 export const Route = createFileRoute("/")({
   component: Landing,
 });
 
-const CODE_1 = "POSPRIDE";
-const CODE_2 = "POSTAT";
 
 function Landing() {
   const navigate = useNavigate();
