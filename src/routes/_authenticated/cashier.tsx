@@ -495,11 +495,21 @@ function CashierScreen() {
               <p className="mt-3 text-sm text-muted-foreground">Tap a product to start.</p>
             </div>
           ) : (
-            <div className="rounded-xl border border-dashed border-border bg-[hsl(var(--card))] p-4 font-mono text-[13px] shadow-[var(--shadow-elev-1)]">
+            <div className="relative rounded-xl border border-dashed border-border bg-[hsl(var(--card))] p-4 font-mono text-[13px] shadow-[var(--shadow-elev-1)]">
+              <button
+                type="button"
+                aria-label="Cancel sale"
+                title="Cancel this sale"
+                onClick={cancelSale}
+                className="absolute right-2 top-2 grid h-7 w-7 place-items-center rounded-md border border-border text-muted-foreground transition hover:bg-destructive hover:text-destructive-foreground"
+              >
+                <X className="h-4 w-4" />
+              </button>
               <div className="text-center">
                 <div className="text-sm font-bold tracking-[0.18em] uppercase">Receipt</div>
                 <div className="text-[11px] text-muted-foreground">{new Date().toLocaleString()}</div>
               </div>
+
               <div className="my-3 border-t border-dashed border-border" />
               <ul className="space-y-3">
                 {cart.map((l) => (
