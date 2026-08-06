@@ -359,7 +359,7 @@ function CashierScreen() {
       <div className="flex flex-col overflow-hidden">
         <header className="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-card px-4 py-3 sm:px-6 sm:py-4">
           <div className="flex items-center gap-3">
-            <BrandLogo />
+            <ManagerGateLogo />
             <div className="hidden sm:block border-l border-border pl-3">
               <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Cashier</div>
               <div className="text-sm font-semibold">{profile?.full_name}</div>
