@@ -340,7 +340,9 @@ function CashierScreen() {
 
 
   if (loading) return <div className="flex min-h-screen items-center justify-center text-muted-foreground">Loading...</div>;
-  if (role === "manager") return <Navigate to="/manager" />;
+  // Cashier mode is always allowed here; the manager reaches their console
+  // through the secret code gate instead of an automatic redirect.
+
 
   const showManual = settings.data?.show_cashier_manual !== false;
 
