@@ -381,6 +381,8 @@ export type Database = {
       sales: {
         Row: {
           cashier_id: string
+          cashier_name: string | null
+          client_id: string | null
           created_at: string
           id: string
           payment_type: Database["public"]["Enums"]["payment_type"]
@@ -389,6 +391,8 @@ export type Database = {
         }
         Insert: {
           cashier_id: string
+          cashier_name?: string | null
+          client_id?: string | null
           created_at?: string
           id?: string
           payment_type?: Database["public"]["Enums"]["payment_type"]
@@ -397,6 +401,8 @@ export type Database = {
         }
         Update: {
           cashier_id?: string
+          cashier_name?: string | null
+          client_id?: string | null
           created_at?: string
           id?: string
           payment_type?: Database["public"]["Enums"]["payment_type"]

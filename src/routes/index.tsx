@@ -10,13 +10,13 @@ import { PWAInstallButton } from "@/components/pwa-install-button";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { ShoppingCart, Package, BarChart3, Users, ShieldCheck, Zap } from "lucide-react";
+import { verifyManagerCodes } from "@/lib/manager-codes";
+import { getMode, setMode } from "@/lib/session-mode";
 
 export const Route = createFileRoute("/")({
   component: Landing,
 });
 
-const CODE_1 = "POSPRIDE";
-const CODE_2 = "POSTAT";
 
 function Landing() {
   const navigate = useNavigate();
@@ -54,15 +54,15 @@ function Landing() {
   async function enterCashierMode() {
     setGuestBusy(true);
     try {
-      localStorage.setItem("cashier_unlock", "true");
-      // Navigate immediately — do not block on any network/auth work.
+      setMode("cashier");
+      // Navigate immediately - do not block on any network/auth work.
       navigate({ to: "/cashier" });
       // Fire-and-forget anonymous sign-in when online for future syncs.
       if (typeof navigator !== "undefined" && navigator.onLine) {
         supabase.auth.getSession().then(({ data }) => {
           if (!data.session) {
             supabase.auth
-              .signInAnonymously({ options: { data: { full_name: "Guest Cashier" } } })
+              .signInAnonymously({ options: { data: { full_name: "Cashier" } } })
               .catch((err) => console.warn("Cashier anon sign-in failed:", err?.message));
           }
         }).catch(() => {});
@@ -84,22 +84,20 @@ function Landing() {
 
   async function handleUnlock(e: React.FormEvent) {
     e.preventDefault();
-    if (c1.trim().toUpperCase() !== CODE_1 || c2.trim().toUpperCase() !== CODE_2) {
-      toast.error("Invalid access codes");
-      return;
-    }
     setUnlockBusy(true);
     try {
-      localStorage.setItem("manager_unlock", "true");
-      const { data } = await supabase.auth.getSession();
-      if (!data.session) {
-        const { error } = await supabase.auth.signInAnonymously({
-          options: { data: { full_name: "Manager" } },
-        });
-        if (error) {
-          toast.error(error.message);
-          setUnlockBusy(false);
-          return;
+      const valid = await verifyManagerCodes(c1, c2);
+      if (!valid) {
+        toast.error("Invalid access codes");
+        return;
+      }
+      setMode("manager");
+      if (typeof navigator !== "undefined" && navigator.onLine) {
+        const { data } = await supabase.auth.getSession();
+        if (!data.session) {
+          await supabase.auth
+            .signInAnonymously({ options: { data: { full_name: "Manager" } } })
+            .catch(() => undefined);
         }
       }
       setGateOpen(false);
@@ -115,9 +113,10 @@ function Landing() {
     return <div className="flex min-h-screen items-center justify-center text-muted-foreground">Loading...</div>;
   }
 
-  const unlocked = typeof window !== "undefined" && localStorage.getItem("manager_unlock") === "true";
-  if (session && (role === "manager" || unlocked)) return <Navigate to="/manager" />;
+  // The landing page stays reachable so the manager can use the secret logo taps.
   if (session && role === "cashier") return <Navigate to="/cashier" />;
+
+
 
   return (
     <div className="min-h-screen bg-background">

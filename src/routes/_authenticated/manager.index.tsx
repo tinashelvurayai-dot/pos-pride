@@ -38,7 +38,7 @@ function SystemPriceBanner() {
           <h2 className="text-2xl font-bold md:text-3xl">System Price</h2>
 
           <p className="mt-1 max-w-xl text-sm text-white/80">
-            Full TillPoint Retail OS — variant inventory, dual-role dashboards, offline till, live analytics, AI forecasting and more. One-time price.
+            Full TillPoint Retail OS - variant inventory, dual-role dashboards, offline till, live analytics, AI forecasting and more. One-time price.
           </p>
         </div>
         <div className="flex flex-col items-start gap-2 md:items-end">

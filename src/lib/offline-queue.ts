@@ -5,6 +5,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { IDB_KEYS, idbGet, idbSet } from "@/lib/offline-db";
 import { markLogStatus } from "@/lib/transaction-log";
+import { clearSaleDelta } from "@/lib/local-stock";
 
 
 const QUEUE_KEY = "tillpoint.offline-sales.v1";
@@ -17,13 +18,15 @@ export type QueuedSaleItem = {
 };
 
 export type QueuedSale = {
-  id: string; // client-generated
+  id: string; // client-generated, also used as the server idempotency key
   cashier_id: string;
+  cashier_name?: string;
   total_amount: number;
   payment_type: "cash" | "mobile" | "card" | "other";
   items: QueuedSaleItem[];
   queued_at: string;
 };
+
 
 type Listener = (count: number) => void;
 const listeners = new Set<Listener>();
@@ -102,10 +105,27 @@ export async function flushQueue(): Promise<{ ok: number; failed: number }> {
   const remaining: QueuedSale[] = [];
   for (const q of list) {
     try {
+      // client_id is a unique idempotency key: a retried upload can never
+      // create a second copy of the same sale.
+      const { data: existing } = await supabase
+        .from("sales")
+        .select("id")
+        .eq("client_id", q.id)
+        .maybeSingle();
+
+      if (existing?.id) {
+        markLogStatus(q.id, "synced");
+        clearSaleDelta(q.id);
+        ok++;
+        continue;
+      }
+
       const { data: sale, error: saleErr } = await supabase
         .from("sales")
         .insert({
           cashier_id: uid,
+          cashier_name: q.cashier_name ?? "Cashier",
+          client_id: q.id,
           total_amount: q.total_amount,
           payment_type: q.payment_type,
           created_at: q.queued_at,
@@ -117,12 +137,14 @@ export async function flushQueue(): Promise<{ ok: number; failed: number }> {
       const { error: itemsErr } = await supabase.from("sale_items").insert(items);
       if (itemsErr) throw itemsErr;
       markLogStatus(q.id, "synced");
+      clearSaleDelta(q.id);
       ok++;
     } catch {
       remaining.push(q);
 
     }
   }
+
   write(remaining);
   return { ok, failed: remaining.length };
 }

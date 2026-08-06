@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { useAuth } from "@/hooks/use-auth";
+import { isManagerMode } from "@/lib/session-mode";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -22,9 +22,9 @@ import { runSync } from "@/lib/sync-manager";
 export const Route = createFileRoute("/_authenticated/transactions")({
   head: () => ({
     meta: [
-      { title: "Transaction Log — TillPoint" },
+      { title: "Transaction Log - TillPoint" },
       { name: "description", content: "Every sale recorded on this till, including offline queued sales waiting to sync." },
-      { property: "og:title", content: "Transaction Log — TillPoint" },
+      { property: "og:title", content: "Transaction Log - TillPoint" },
       { property: "og:description", content: "Every sale recorded on this till, including offline queued sales waiting to sync." },
     ],
   }),
@@ -32,19 +32,19 @@ export const Route = createFileRoute("/_authenticated/transactions")({
 });
 
 function TransactionsPage() {
-  const { role } = useAuth();
   const [entries, setEntries] = useState<TxLogEntry[]>([]);
   const [query, setQuery] = useState("");
-  const [unlocked, setUnlocked] = useState(false);
+  const [isManager, setIsManager] = useState(false);
 
   useEffect(() => {
-    setUnlocked(typeof window !== "undefined" && localStorage.getItem("manager_unlock") === "true");
+    // Manager tools appear only when this device is actually in manager mode.
+    setIsManager(isManagerMode());
     const off = subscribeLog(setEntries);
     void hydrateLogFromIdb();
     return off;
   }, []);
 
-  const isManager = role === "manager" || unlocked;
+
 
   const filtered = useMemo(() => {
     const q = query.toLowerCase().trim();
@@ -66,7 +66,7 @@ function TransactionsPage() {
       await navigator.clipboard.writeText(text);
       toast.success("Transaction log copied to clipboard");
     } catch {
-      toast.error("Clipboard blocked — use Download CSV instead");
+      toast.error("Clipboard blocked - use Download CSV instead");
     }
   }
 

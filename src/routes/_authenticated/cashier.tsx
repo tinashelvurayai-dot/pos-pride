@@ -1,4 +1,4 @@
-import { createFileRoute, Navigate, Link } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -10,12 +10,15 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { SignOutButton } from "@/components/sign-out-button";
-import { BrandLogo } from "@/components/brand-logo";
+import { ManagerGateLogo } from "@/components/manager-gate-logo";
 import { toast } from "sonner";
 import { formatCurrency } from "@/lib/format";
-import { ShoppingCart, Search, Trash2, Plus, Minus, Package as PackageIcon, BookOpen, ClipboardList, HelpCircle, RefreshCw, CheckCircle2, AlertTriangle, X } from "lucide-react";
+import { ShoppingCart, Search, Trash2, Plus, Minus, Package as PackageIcon, BookOpen, ClipboardList, HelpCircle, RefreshCw, CheckCircle2, AlertTriangle, X, Lock as LockIcon } from "lucide-react";
 import { enqueueSale, flushQueue, getQueue } from "@/lib/offline-queue";
 import { appendLog } from "@/lib/transaction-log";
+import { recordSaleDelta, hydrateStockDeltas } from "@/lib/local-stock";
+import { CASHIER_NAME, setMode } from "@/lib/session-mode";
+
 
 import { IDB_KEYS, idbGet, idbSet } from "@/lib/offline-db";
 import { SyncIndicator } from "@/components/sync-indicator";
@@ -45,7 +48,7 @@ type SyncStatus = "idle" | "syncing" | "synced" | "failed";
 const OFFLINE_CACHE_KEY = "tillpoint.cashier.catalog.v1";
 
 function CashierScreen() {
-  const { role, profile, session, loading } = useAuth();
+  const { profile, session, loading } = useAuth();
   const qc = useQueryClient();
   const online = useOnline();
   const [hideImages] = useHideImages();
@@ -78,7 +81,11 @@ function CashierScreen() {
   const [idbCatalog, setIdbCatalog] = useState<Variant[]>([]);
   useEffect(() => {
     void idbGet<Variant[]>(IDB_KEYS.catalog).then((c) => { if (c?.length) setIdbCatalog(c); });
+    // Opening the till puts this device in cashier mode (manager rights drop away).
+    setMode("cashier");
+    void hydrateStockDeltas();
   }, []);
+
 
   const offlineList = useMemo<Variant[]>(() => {
     try {
@@ -169,6 +176,14 @@ function CashierScreen() {
 
   function removeLine(id: string) { setCart((prev) => prev.filter((l) => l.variant.id !== id)); }
 
+  function cancelSale() {
+    if (cart.length === 0) return;
+    if (!confirm("Cancel this sale and clear the receipt?")) return;
+    setCart([]);
+    toast.info("Sale cancelled");
+  }
+
+
   function findVariantByPhrase(phrase: string): Variant | null {
     const q = phrase.toLowerCase().trim();
     if (!q) return null;
@@ -247,11 +262,13 @@ function CashierScreen() {
         unit_price: Number(l.variant.price),
         subtotal: Number(l.variant.price) * l.qty,
       }));
-      const cashierName = profile?.full_name ?? "Cashier";
+      const cashierName = profile?.full_name ?? CASHIER_NAME;
+      const clientId = crypto.randomUUID?.() ?? `${Date.now()}-${Math.random()}`;
 
       const queueLocally = () => {
         const entry = enqueueSale({
           cashier_id: session?.user.id ?? "",
+          cashier_name: cashierName,
           total_amount: subtotal,
           payment_type: payment,
           items,
@@ -265,6 +282,8 @@ function CashierScreen() {
           items: logItems,
           status: "queued",
         });
+        // Reduce on-hand counts locally right away so offline stock stays accurate.
+        recordSaleDelta(entry.id, items);
         setQueuedCount(getQueue().length);
         setSyncStatus("idle");
         return { queued: true as const };
@@ -285,6 +304,8 @@ function CashierScreen() {
         const { data: sale, error: saleErr } = await withTimeout(
           supabase.from("sales").insert({
             cashier_id: session.user.id,
+            cashier_name: cashierName,
+            client_id: clientId,
             total_amount: subtotal,
             payment_type: payment,
           }).select("id").single(),
@@ -308,6 +329,7 @@ function CashierScreen() {
         // Network failed or timed out -> keep the sale safe locally.
         return queueLocally();
       }
+
     },
     onMutate: () => setCheckingOut(true),
     onSettled: () => setCheckingOut(false),
@@ -326,7 +348,9 @@ function CashierScreen() {
 
 
   if (loading) return <div className="flex min-h-screen items-center justify-center text-muted-foreground">Loading...</div>;
-  if (role === "manager") return <Navigate to="/manager" />;
+  // Cashier mode is always allowed here; the manager reaches their console
+  // through the secret code gate instead of an automatic redirect.
+
 
   const showManual = settings.data?.show_cashier_manual !== false;
 
@@ -335,7 +359,7 @@ function CashierScreen() {
       <div className="flex flex-col overflow-hidden">
         <header className="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-card px-4 py-3 sm:px-6 sm:py-4">
           <div className="flex items-center gap-3">
-            <BrandLogo />
+            <ManagerGateLogo />
             <div className="hidden sm:block border-l border-border pl-3">
               <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Cashier</div>
               <div className="text-sm font-semibold">{profile?.full_name}</div>
@@ -356,6 +380,12 @@ function CashierScreen() {
                 <ClipboardList className="mr-2 h-4 w-4" /> Transaction log
               </Button>
             </Link>
+            <Link to="/shift">
+              <Button variant="outline" size="sm">
+                <LockIcon className="mr-2 h-4 w-4" /> Shift close
+              </Button>
+            </Link>
+
             <Link to="/orders">
               <Button variant="outline" size="sm">
                 <ClipboardList className="mr-2 h-4 w-4" /> Orders
@@ -479,11 +509,21 @@ function CashierScreen() {
               <p className="mt-3 text-sm text-muted-foreground">Tap a product to start.</p>
             </div>
           ) : (
-            <div className="rounded-xl border border-dashed border-border bg-[hsl(var(--card))] p-4 font-mono text-[13px] shadow-[var(--shadow-elev-1)]">
+            <div className="relative rounded-xl border border-dashed border-border bg-[hsl(var(--card))] p-4 font-mono text-[13px] shadow-[var(--shadow-elev-1)]">
+              <button
+                type="button"
+                aria-label="Cancel sale"
+                title="Cancel this sale"
+                onClick={cancelSale}
+                className="absolute right-2 top-2 grid h-7 w-7 place-items-center rounded-md border border-border text-muted-foreground transition hover:bg-destructive hover:text-destructive-foreground"
+              >
+                <X className="h-4 w-4" />
+              </button>
               <div className="text-center">
                 <div className="text-sm font-bold tracking-[0.18em] uppercase">Receipt</div>
                 <div className="text-[11px] text-muted-foreground">{new Date().toLocaleString()}</div>
               </div>
+
               <div className="my-3 border-t border-dashed border-border" />
               <ul className="space-y-3">
                 {cart.map((l) => (

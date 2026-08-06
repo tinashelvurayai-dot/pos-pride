@@ -19,8 +19,11 @@ import {
   ClipboardList,
   Sparkles,
   AlertTriangle,
+  Lock as LockIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { isManagerMode } from "@/lib/session-mode";
+
 
 export const Route = createFileRoute("/_authenticated/manager")({
   component: ManagerLayout,
@@ -37,9 +40,11 @@ const navItems: Array<{ to: string; label: string; icon: typeof LayoutDashboard;
   { to: "/manager/suppliers", label: "Suppliers & PO", icon: Truck },
   { to: "/manager/forecast", label: "AI Forecast", icon: Sparkles },
   { to: "/transactions", label: "Transaction Log", icon: ClipboardList },
+  { to: "/shift", label: "Shift Close (Z)", icon: LockIcon },
   { to: "/orders", label: "Orders", icon: ClipboardList },
 
   { to: "/manager/manuals", label: "Manuals", icon: BookOpen },
+
 ];
 
 
@@ -49,8 +54,9 @@ function ManagerLayout() {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   if (loading) return <div className="flex min-h-screen items-center justify-center text-muted-foreground">Loading...</div>;
-  const unlocked = typeof window !== "undefined" && localStorage.getItem("manager_unlock") === "true";
+  const unlocked = isManagerMode();
   if (role !== "manager" && !unlocked) return <Navigate to="/cashier" />;
+
 
   const SidebarInner = (
     <>
