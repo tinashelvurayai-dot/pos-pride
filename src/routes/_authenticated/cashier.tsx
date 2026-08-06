@@ -176,6 +176,14 @@ function CashierScreen() {
 
   function removeLine(id: string) { setCart((prev) => prev.filter((l) => l.variant.id !== id)); }
 
+  function cancelSale() {
+    if (cart.length === 0) return;
+    if (!confirm("Cancel this sale and clear the receipt?")) return;
+    setCart([]);
+    toast.info("Sale cancelled");
+  }
+
+
   function findVariantByPhrase(phrase: string): Variant | null {
     const q = phrase.toLowerCase().trim();
     if (!q) return null;
