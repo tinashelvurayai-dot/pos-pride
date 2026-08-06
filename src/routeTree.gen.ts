@@ -13,6 +13,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedTransactionsRouteImport } from './routes/_authenticated/transactions'
+import { Route as AuthenticatedShiftRouteImport } from './routes/_authenticated/shift'
 import { Route as AuthenticatedOrdersRouteImport } from './routes/_authenticated/orders'
 import { Route as AuthenticatedManagerRouteImport } from './routes/_authenticated/manager'
 import { Route as AuthenticatedCashierRouteImport } from './routes/_authenticated/cashier'
@@ -48,6 +49,11 @@ const AuthenticatedTransactionsRoute =
     path: '/transactions',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedShiftRoute = AuthenticatedShiftRouteImport.update({
+  id: '/shift',
+  path: '/shift',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedOrdersRoute = AuthenticatedOrdersRouteImport.update({
   id: '/orders',
   path: '/orders',
@@ -136,6 +142,7 @@ export interface FileRoutesByFullPath {
   '/cashier': typeof AuthenticatedCashierRoute
   '/manager': typeof AuthenticatedManagerRouteWithChildren
   '/orders': typeof AuthenticatedOrdersRoute
+  '/shift': typeof AuthenticatedShiftRoute
   '/transactions': typeof AuthenticatedTransactionsRoute
   '/manager/alerts': typeof AuthenticatedManagerAlertsRoute
   '/manager/cash': typeof AuthenticatedManagerCashRoute
@@ -154,6 +161,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/cashier': typeof AuthenticatedCashierRoute
   '/orders': typeof AuthenticatedOrdersRoute
+  '/shift': typeof AuthenticatedShiftRoute
   '/transactions': typeof AuthenticatedTransactionsRoute
   '/manager/alerts': typeof AuthenticatedManagerAlertsRoute
   '/manager/cash': typeof AuthenticatedManagerCashRoute
@@ -175,6 +183,7 @@ export interface FileRoutesById {
   '/_authenticated/cashier': typeof AuthenticatedCashierRoute
   '/_authenticated/manager': typeof AuthenticatedManagerRouteWithChildren
   '/_authenticated/orders': typeof AuthenticatedOrdersRoute
+  '/_authenticated/shift': typeof AuthenticatedShiftRoute
   '/_authenticated/transactions': typeof AuthenticatedTransactionsRoute
   '/_authenticated/manager/alerts': typeof AuthenticatedManagerAlertsRoute
   '/_authenticated/manager/cash': typeof AuthenticatedManagerCashRoute
@@ -196,6 +205,7 @@ export interface FileRouteTypes {
     | '/cashier'
     | '/manager'
     | '/orders'
+    | '/shift'
     | '/transactions'
     | '/manager/alerts'
     | '/manager/cash'
@@ -214,6 +224,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/cashier'
     | '/orders'
+    | '/shift'
     | '/transactions'
     | '/manager/alerts'
     | '/manager/cash'
@@ -234,6 +245,7 @@ export interface FileRouteTypes {
     | '/_authenticated/cashier'
     | '/_authenticated/manager'
     | '/_authenticated/orders'
+    | '/_authenticated/shift'
     | '/_authenticated/transactions'
     | '/_authenticated/manager/alerts'
     | '/_authenticated/manager/cash'
@@ -282,6 +294,13 @@ declare module '@tanstack/react-router' {
       path: '/transactions'
       fullPath: '/transactions'
       preLoaderRoute: typeof AuthenticatedTransactionsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/shift': {
+      id: '/_authenticated/shift'
+      path: '/shift'
+      fullPath: '/shift'
+      preLoaderRoute: typeof AuthenticatedShiftRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/orders': {
@@ -420,6 +439,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedCashierRoute: typeof AuthenticatedCashierRoute
   AuthenticatedManagerRoute: typeof AuthenticatedManagerRouteWithChildren
   AuthenticatedOrdersRoute: typeof AuthenticatedOrdersRoute
+  AuthenticatedShiftRoute: typeof AuthenticatedShiftRoute
   AuthenticatedTransactionsRoute: typeof AuthenticatedTransactionsRoute
 }
 
@@ -427,6 +447,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedCashierRoute: AuthenticatedCashierRoute,
   AuthenticatedManagerRoute: AuthenticatedManagerRouteWithChildren,
   AuthenticatedOrdersRoute: AuthenticatedOrdersRoute,
+  AuthenticatedShiftRoute: AuthenticatedShiftRoute,
   AuthenticatedTransactionsRoute: AuthenticatedTransactionsRoute,
 }
 
