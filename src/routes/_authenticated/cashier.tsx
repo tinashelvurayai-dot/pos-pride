@@ -247,11 +247,13 @@ function CashierScreen() {
         unit_price: Number(l.variant.price),
         subtotal: Number(l.variant.price) * l.qty,
       }));
-      const cashierName = profile?.full_name ?? "Cashier";
+      const cashierName = profile?.full_name ?? CASHIER_NAME;
+      const clientId = crypto.randomUUID?.() ?? `${Date.now()}-${Math.random()}`;
 
       const queueLocally = () => {
         const entry = enqueueSale({
           cashier_id: session?.user.id ?? "",
+          cashier_name: cashierName,
           total_amount: subtotal,
           payment_type: payment,
           items,
@@ -265,6 +267,8 @@ function CashierScreen() {
           items: logItems,
           status: "queued",
         });
+        // Reduce on-hand counts locally right away so offline stock stays accurate.
+        recordSaleDelta(entry.id, items);
         setQueuedCount(getQueue().length);
         setSyncStatus("idle");
         return { queued: true as const };
@@ -285,6 +289,8 @@ function CashierScreen() {
         const { data: sale, error: saleErr } = await withTimeout(
           supabase.from("sales").insert({
             cashier_id: session.user.id,
+            cashier_name: cashierName,
+            client_id: clientId,
             total_amount: subtotal,
             payment_type: payment,
           }).select("id").single(),
@@ -308,6 +314,7 @@ function CashierScreen() {
         // Network failed or timed out -> keep the sale safe locally.
         return queueLocally();
       }
+
     },
     onMutate: () => setCheckingOut(true),
     onSettled: () => setCheckingOut(false),
