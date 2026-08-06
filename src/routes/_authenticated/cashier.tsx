@@ -16,6 +16,9 @@ import { formatCurrency } from "@/lib/format";
 import { ShoppingCart, Search, Trash2, Plus, Minus, Package as PackageIcon, BookOpen, ClipboardList, HelpCircle, RefreshCw, CheckCircle2, AlertTriangle, X } from "lucide-react";
 import { enqueueSale, flushQueue, getQueue } from "@/lib/offline-queue";
 import { appendLog } from "@/lib/transaction-log";
+import { recordSaleDelta, hydrateStockDeltas } from "@/lib/local-stock";
+import { CASHIER_NAME, setMode } from "@/lib/session-mode";
+
 
 import { IDB_KEYS, idbGet, idbSet } from "@/lib/offline-db";
 import { SyncIndicator } from "@/components/sync-indicator";
