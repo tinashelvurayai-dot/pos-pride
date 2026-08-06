@@ -380,6 +380,12 @@ function CashierScreen() {
                 <ClipboardList className="mr-2 h-4 w-4" /> Transaction log
               </Button>
             </Link>
+            <Link to="/shift">
+              <Button variant="outline" size="sm">
+                <Lock className="mr-2 h-4 w-4" /> Shift close
+              </Button>
+            </Link>
+
             <Link to="/orders">
               <Button variant="outline" size="sm">
                 <ClipboardList className="mr-2 h-4 w-4" /> Orders
