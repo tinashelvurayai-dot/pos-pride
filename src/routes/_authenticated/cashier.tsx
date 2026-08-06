@@ -13,7 +13,7 @@ import { SignOutButton } from "@/components/sign-out-button";
 import { ManagerGateLogo } from "@/components/manager-gate-logo";
 import { toast } from "sonner";
 import { formatCurrency } from "@/lib/format";
-import { ShoppingCart, Search, Trash2, Plus, Minus, Package as PackageIcon, BookOpen, ClipboardList, HelpCircle, RefreshCw, CheckCircle2, AlertTriangle, X } from "lucide-react";
+import { ShoppingCart, Search, Trash2, Plus, Minus, Package as PackageIcon, BookOpen, ClipboardList, HelpCircle, RefreshCw, CheckCircle2, AlertTriangle, X, Lock as LockIcon } from "lucide-react";
 import { enqueueSale, flushQueue, getQueue } from "@/lib/offline-queue";
 import { appendLog } from "@/lib/transaction-log";
 import { recordSaleDelta, hydrateStockDeltas } from "@/lib/local-stock";
