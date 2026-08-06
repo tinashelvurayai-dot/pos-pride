@@ -113,9 +113,9 @@ function Landing() {
     return <div className="flex min-h-screen items-center justify-center text-muted-foreground">Loading...</div>;
   }
 
-  const mode = getMode();
-  if (mode === "manager") return <Navigate to="/manager" />;
-  if (mode === "cashier" || (session && role === "cashier")) return <Navigate to="/cashier" />;
+  // The landing page stays reachable so the manager can use the secret logo taps.
+  if (session && role === "cashier") return <Navigate to="/cashier" />;
+
 
 
   return (
