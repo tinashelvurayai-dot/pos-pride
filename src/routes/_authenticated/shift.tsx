@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { BrandLogo } from "@/components/brand-logo";
 import { SyncIndicator } from "@/components/sync-indicator";
 import { formatCurrency, formatDate } from "@/lib/format";
-import { ArrowLeft, Download, Lock } from "lucide-react";
+import { ArrowLeft, Download, Lock as LockIcon } from "lucide-react";
 import { toast } from "sonner";
 import { subscribeLog, type TxLogEntry } from "@/lib/transaction-log";
 import {
@@ -150,7 +150,7 @@ function ShiftPage() {
               <Textarea id="note" value={note} onChange={(e) => setNote(e.target.value)} rows={3} />
             </div>
           </div>
-          <Button className="mt-4" onClick={doClose}><Lock className="mr-2 h-4 w-4" /> Close shift</Button>
+          <Button className="mt-4" onClick={doClose}><LockIcon className="mr-2 h-4 w-4" /> Close shift</Button>
         </Card>
 
         <h2 className="mt-8 text-base font-semibold">Past shifts</h2>

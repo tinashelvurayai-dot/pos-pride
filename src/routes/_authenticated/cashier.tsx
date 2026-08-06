@@ -382,7 +382,7 @@ function CashierScreen() {
             </Link>
             <Link to="/shift">
               <Button variant="outline" size="sm">
-                <Lock className="mr-2 h-4 w-4" /> Shift close
+                <LockIcon className="mr-2 h-4 w-4" /> Shift close
               </Button>
             </Link>
 

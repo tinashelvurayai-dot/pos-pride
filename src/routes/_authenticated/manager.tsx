@@ -19,7 +19,7 @@ import {
   ClipboardList,
   Sparkles,
   AlertTriangle,
-  Lock,
+  Lock as LockIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { isManagerMode } from "@/lib/session-mode";
@@ -40,7 +40,7 @@ const navItems: Array<{ to: string; label: string; icon: typeof LayoutDashboard;
   { to: "/manager/suppliers", label: "Suppliers & PO", icon: Truck },
   { to: "/manager/forecast", label: "AI Forecast", icon: Sparkles },
   { to: "/transactions", label: "Transaction Log", icon: ClipboardList },
-  { to: "/shift", label: "Shift Close (Z)", icon: Lock },
+  { to: "/shift", label: "Shift Close (Z)", icon: LockIcon },
   { to: "/orders", label: "Orders", icon: ClipboardList },
 
   { to: "/manager/manuals", label: "Manuals", icon: BookOpen },
