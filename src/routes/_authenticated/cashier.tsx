@@ -263,88 +263,58 @@ function CashierScreen() {
         subtotal: Number(l.variant.price) * l.qty,
       }));
       const cashierName = profile?.full_name ?? CASHIER_NAME;
-      const clientId = crypto.randomUUID?.() ?? `${Date.now()}-${Math.random()}`;
+      const saleId = crypto.randomUUID?.() ?? `${Date.now()}-${Math.random()}`;
 
-      const queueLocally = () => {
-        const entry = enqueueSale({
-          cashier_id: session?.user.id ?? "",
-          cashier_name: cashierName,
-          total_amount: subtotal,
-          payment_type: payment,
-          items,
-        });
-        appendLog({
-          id: entry.id,
-          created_at: entry.queued_at,
-          total: subtotal,
-          payment_type: payment,
-          cashier_name: cashierName,
-          items: logItems,
-          status: "queued",
-        });
-        // Reduce on-hand counts locally right away so offline stock stays accurate.
-        recordSaleDelta(entry.id, items);
-        setQueuedCount(getQueue().length);
-        setSyncStatus("idle");
-        return { queued: true as const };
-      };
+      // LOCAL FIRST: the sale is committed to this device before anything else.
+      // The till never waits for the cloud, so a sale can never hang on the network.
+      const entry = enqueueSale({
+        id: saleId,
+        cashier_id: session?.user.id ?? "",
+        cashier_name: cashierName,
+        total_amount: subtotal,
+        payment_type: payment,
+        items,
+      });
+      const logEntry = appendLog({
+        id: entry.id,
+        created_at: entry.queued_at,
+        total: subtotal,
+        payment_type: payment,
+        cashier_name: cashierName,
+        items: logItems,
+        status: "queued",
+      });
+      // Reduce on-hand counts locally right away so offline stock stays accurate.
+      recordSaleDelta(entry.id, items);
+      setQueuedCount(getQueue().length);
 
-      // Offline OR no session yet -> queue locally. Sync will attach a valid auth uid later.
-      const reallyOnline = typeof navigator !== "undefined" ? navigator.onLine : online;
-      if (!reallyOnline || !session?.user.id) return queueLocally();
-
-      // Online path, but never let a dead/slow connection hang the till.
-      const withTimeout = <T,>(p: PromiseLike<T>, ms = 6000) =>
-        Promise.race([
-          Promise.resolve(p),
-          new Promise<never>((_, rej) => setTimeout(() => rej(new Error("timeout")), ms)),
-        ]);
-
-      try {
-        const { data: sale, error: saleErr } = await withTimeout(
-          supabase.from("sales").insert({
-            cashier_id: session.user.id,
-            cashier_name: cashierName,
-            client_id: clientId,
-            total_amount: subtotal,
-            payment_type: payment,
-          }).select("id").single(),
-        );
-        if (saleErr) throw saleErr;
-
-        const { error: itemsErr } = await withTimeout(
-          supabase.from("sale_items").insert(items.map((i) => ({ ...i, sale_id: sale.id }))),
-        );
-        if (itemsErr) throw itemsErr;
-        appendLog({
-          id: sale.id,
-          total: subtotal,
-          payment_type: payment,
-          cashier_name: cashierName,
-          items: logItems,
-          status: "synced",
-        });
-        return { queued: false as const };
-      } catch {
-        // Network failed or timed out -> keep the sale safe locally.
-        return queueLocally();
-      }
-
+      return { entry: logEntry };
     },
     onMutate: () => setCheckingOut(true),
     onSettled: () => setCheckingOut(false),
     onSuccess: (res) => {
-      if (res?.queued) {
-        toast.success(`Sale saved on this device - will sync when online (${formatCurrency(subtotal)})`);
-      } else {
-        toast.success(`Sale of ${formatCurrency(subtotal)} recorded`);
-      }
+      const paid = Number(amountPaid);
+      setReceipt({
+        entry: res.entry,
+        amountPaid: Number.isFinite(paid) && paid > 0 ? paid : subtotal,
+        change: Number.isFinite(paid) && paid > subtotal ? paid - subtotal : 0,
+      });
+      toast.success(`Sale completed - ${formatCurrency(res.entry.total)}`);
       setCart([]);
-      if (!res?.queued) qc.invalidateQueries({ queryKey: ["cashier"] });
+      setAmountPaid("");
+      // Background upload; failures simply stay queued and retry automatically.
+      if (typeof navigator === "undefined" || navigator.onLine) {
+        void runSync().then(() => {
+          setQueuedCount(getQueue().length);
+          setLastSync(new Date().toISOString());
+          qc.invalidateQueries({ queryKey: ["cashier"] });
+        });
+      }
     },
 
     onError: (e: Error) => toast.error(e.message),
   });
+
 
 
   if (loading) return <div className="flex min-h-screen items-center justify-center text-muted-foreground">Loading...</div>;
