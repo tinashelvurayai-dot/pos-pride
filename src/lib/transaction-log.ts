@@ -57,8 +57,10 @@ function notify() {
 
 function persist(list: TxLogEntry[]) {
   logCache = list;
+  // Keep the synchronous mirror bounded so repeated offline sales never block
+  // the cashier while the full history is written to IndexedDB.
   try {
-    window.localStorage.setItem(LOG_KEY, JSON.stringify(list));
+    window.localStorage.setItem(LOG_KEY, JSON.stringify(list.slice(0, 100)));
   } catch {
     /* best effort */
   }

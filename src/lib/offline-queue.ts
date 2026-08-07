@@ -63,8 +63,11 @@ function notify() {
 
 function persist(list: QueuedSale[]) {
   queueCache = list;
+  // Keep only a small synchronous mirror. Serializing thousands of sales into
+  // localStorage was blocking the cashier and leaving the button on “Saving”.
+  // IndexedDB remains the durable source for the complete queue.
   try {
-    window.localStorage.setItem(QUEUE_KEY, JSON.stringify(list));
+    window.localStorage.setItem(QUEUE_KEY, JSON.stringify(list.slice(-50)));
   } catch {
     /* best effort */
   }
