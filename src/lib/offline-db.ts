@@ -20,13 +20,17 @@ export async function idbGet<T>(key: string): Promise<T | undefined> {
   }
 }
 
-export async function idbSet<T>(key: string, value: T): Promise<void> {
-  if (!store) return;
-  try {
-    await set(key, value, store);
-  } catch {
-    /* noop */
-  }
+const pendingWrites = new Map<string, Promise<void>>();
+
+export function idbSet<T>(key: string, value: T): Promise<void> {
+  if (!store) return Promise.resolve();
+  const previous = pendingWrites.get(key) ?? Promise.resolve();
+  const next = previous
+    .catch(() => undefined)
+    .then(() => set(key, value, store))
+    .catch(() => undefined);
+  pendingWrites.set(key, next);
+  return next;
 }
 
 export async function idbDel(key: string): Promise<void> {
@@ -35,5 +39,15 @@ export async function idbDel(key: string): Promise<void> {
     await del(key, store);
   } catch {
     /* noop */
+  }
+}
+
+/** Ask the browser to protect the till's offline data from eviction. */
+export async function requestPersistentStorage(): Promise<boolean> {
+  if (typeof navigator === "undefined" || !navigator.storage?.persist) return false;
+  try {
+    return await navigator.storage.persist();
+  } catch {
+    return false;
   }
 }

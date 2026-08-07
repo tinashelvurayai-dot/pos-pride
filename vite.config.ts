@@ -6,13 +6,27 @@ export default defineConfig({
     server: { entry: "server" },
   },
   vite: {
+    server: {
+      host: "0.0.0.0",
+      strictPort: false,
+    },
+    preview: {
+      host: "0.0.0.0",
+      strictPort: false,
+    },
     plugins: [
       VitePWA({
         registerType: "autoUpdate",
         injectRegister: null,
         filename: "sw.js",
         strategies: "generateSW",
-        includeAssets: ["favicon.ico", "manifest.webmanifest", "icons/icon-192.png", "icons/icon-512.png", "icons/apple-touch-icon.png"],
+        includeAssets: [
+          "favicon.ico",
+          "manifest.webmanifest",
+          "icons/icon-192.png",
+          "icons/icon-512.png",
+          "icons/apple-touch-icon.png",
+        ],
         devOptions: { enabled: false },
         manifest: false,
         workbox: {
@@ -26,7 +40,10 @@ export default defineConfig({
           navigateFallbackDenylist: [/^\/api/, /^\/~oauth/, /^\/__l5e/],
           runtimeCaching: [
             {
-              urlPattern: ({ url }) => url.pathname.startsWith("/__l5e/") || url.pathname.startsWith("/assets/") || url.pathname.startsWith("/_build/"),
+              urlPattern: ({ url }) =>
+                url.pathname.startsWith("/__l5e/") ||
+                url.pathname.startsWith("/assets/") ||
+                url.pathname.startsWith("/_build/"),
               handler: "CacheFirst",
               options: {
                 cacheName: "tillpoint-static",
@@ -34,7 +51,10 @@ export default defineConfig({
               },
             },
             {
-              urlPattern: ({ url }) => url.pathname.startsWith("/icons/") || url.pathname === "/favicon.ico" || url.pathname === "/manifest.webmanifest",
+              urlPattern: ({ url }) =>
+                url.pathname.startsWith("/icons/") ||
+                url.pathname === "/favicon.ico" ||
+                url.pathname === "/manifest.webmanifest",
               handler: "CacheFirst",
               options: {
                 cacheName: "tillpoint-icons",
@@ -42,7 +62,8 @@ export default defineConfig({
               },
             },
             {
-              urlPattern: ({ url }) => url.hostname === "fonts.gstatic.com" || url.hostname === "fonts.googleapis.com",
+              urlPattern: ({ url }) =>
+                url.hostname === "fonts.gstatic.com" || url.hostname === "fonts.googleapis.com",
               handler: "CacheFirst",
               options: {
                 cacheName: "tillpoint-fonts",
@@ -59,7 +80,8 @@ export default defineConfig({
               },
             },
             {
-              urlPattern: ({ url }) => /\.supabase\.co$/.test(url.hostname) && url.pathname.startsWith("/rest/"),
+              urlPattern: ({ url }) =>
+                /\.supabase\.co$/.test(url.hostname) && url.pathname.startsWith("/rest/"),
               handler: "NetworkFirst",
               options: {
                 cacheName: "tillpoint-api",
