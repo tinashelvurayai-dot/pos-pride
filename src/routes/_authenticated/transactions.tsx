@@ -8,7 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { BrandLogo } from "@/components/brand-logo";
 import { SyncIndicator } from "@/components/sync-indicator";
 import { formatCurrency, formatDate } from "@/lib/format";
-import { ArrowLeft, Copy, Download, Trash2, Search } from "lucide-react";
+import { ArrowLeft, Copy, Download, Trash2, Search, Printer } from "lucide-react";
+import { printReceipt, downloadReceipt } from "@/lib/receipt";
 import { toast } from "sonner";
 import {
   clearLog,
@@ -164,6 +165,15 @@ function TransactionsPage() {
                     </li>
                   ))}
                 </ul>
+                <div className="mt-3 flex flex-wrap gap-2 border-t border-border pt-3">
+                  <Button variant="outline" size="sm" onClick={() => printReceipt(e)}>
+                    <Printer className="mr-2 h-4 w-4" /> Reprint receipt
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={() => downloadReceipt(e)}>
+                    <Download className="mr-2 h-4 w-4" /> Save receipt
+                  </Button>
+                </div>
+
               </Card>
             ))}
           </div>
