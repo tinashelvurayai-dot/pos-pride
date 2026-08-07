@@ -542,13 +542,28 @@ function CashierScreen() {
 
             </Select>
           </div>
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-muted-foreground">Amount paid (optional)</label>
+            <Input
+              inputMode="decimal"
+              placeholder={formatCurrency(subtotal)}
+              value={amountPaid}
+              onChange={(e) => setAmountPaid(e.target.value)}
+            />
+            {Number(amountPaid) > subtotal && (
+              <p className="text-xs font-medium text-emerald-700">Change: {formatCurrency(Number(amountPaid) - subtotal)}</p>
+            )}
+          </div>
           <div className="flex items-center justify-between text-lg font-bold">
             <span>Total</span>
             <span>{formatCurrency(subtotal)}</span>
           </div>
           <Button className="w-full" size="lg" disabled={cart.length === 0 || checkingOut} onClick={() => checkout.mutate()}>
-            {checkingOut ? "Processing..." : online ? "Complete sale" : "Queue sale (offline)"}
+            {checkingOut ? "Saving..." : "Complete sale"}
           </Button>
+          <p className="text-center text-[11px] text-muted-foreground">
+            Sales are saved on this device first, then uploaded automatically.
+          </p>
         </div>
       </aside>
 
@@ -564,6 +579,33 @@ function CashierScreen() {
           <VoiceCommandHelp />
         </DialogContent>
       </Dialog>
+      <Dialog open={receipt !== null} onOpenChange={(o) => { if (!o) setReceipt(null); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle>Sale completed</DialogTitle></DialogHeader>
+          {receipt && (
+            <div className="space-y-3">
+              <div className="rounded-lg border border-dashed border-border bg-accent/30 p-3 text-xs">
+                <pre className="whitespace-pre-wrap font-mono leading-relaxed">
+                  {receiptText(receipt.entry, { amountPaid: receipt.amountPaid, change: receipt.change })}
+                </pre>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Receipt {receiptNumber(receipt.entry)} is stored on this device. Reprint it any time from the transaction log.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <Button className="flex-1" onClick={() => printReceipt(receipt.entry, { amountPaid: receipt.amountPaid, change: receipt.change })}>
+                  Print receipt
+                </Button>
+                <Button variant="outline" className="flex-1" onClick={() => downloadReceipt(receipt.entry, { amountPaid: receipt.amountPaid, change: receipt.change })}>
+                  Download
+                </Button>
+                <Button variant="ghost" onClick={() => setReceipt(null)}>Next sale</Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
     </div>
   );
 }
