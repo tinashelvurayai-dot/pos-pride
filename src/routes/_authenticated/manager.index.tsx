@@ -1,10 +1,14 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { DollarSign, ShoppingBag, Package, AlertTriangle, BadgePercent } from "lucide-react";
 import { SyncIndicator, useSyncState } from "@/components/sync-indicator";
+import { readLog, subscribeLog, type TxLogEntry } from "@/lib/transaction-log";
+import { getQueue, subscribeQueue, type QueuedSale } from "@/lib/offline-queue";
 
 function PendingSyncNotice() {
   const { pending, lastSync } = useSyncState();
@@ -21,6 +25,47 @@ function PendingSyncNotice() {
     </div>
   );
 }
+
+function SyncOverview() {
+  const [log, setLog] = useState<TxLogEntry[]>([]);
+  const [queue, setQueue] = useState<QueuedSale[]>([]);
+  useEffect(() => {
+    setQueue(getQueue());
+    const offLog = subscribeLog(setLog);
+    const offQueue = subscribeQueue(() => setQueue(getQueue()));
+    return () => { offLog(); offQueue(); };
+  }, []);
+
+  const synced = log.filter((e) => e.status === "synced");
+  const offline = log.filter((e) => e.status !== "synced");
+  const failed = queue.filter((q) => q.status === "failed").length;
+  const pending = queue.length - failed;
+
+  const tiles = [
+    { label: "Synced sales", value: synced.length },
+    { label: "Offline sales on device", value: offline.length },
+    { label: "Pending upload", value: pending },
+    { label: "Failed upload", value: failed },
+  ];
+
+  return (
+    <section className="mb-8 rounded-xl border border-border bg-card p-5">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+        <h2 className="font-semibold">Synchronization</h2>
+        <Link to="/sync"><Button variant="outline" size="sm">Open sync queue</Button></Link>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-4">
+        {tiles.map((t) => (
+          <div key={t.label} className="rounded-lg border border-border p-3">
+            <div className="text-xs text-muted-foreground">{t.label}</div>
+            <div className="mt-1 text-2xl font-bold">{t.value}</div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 
 export const Route = createFileRoute("/_authenticated/manager/")({
   component: ManagerDashboard,
@@ -100,6 +145,10 @@ function ManagerDashboard() {
       <PendingSyncNotice />
 
       <SystemPriceBanner />
+
+      <SyncOverview />
+
+
 
       <section className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {cards.map((c) => (

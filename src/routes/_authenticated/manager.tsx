@@ -19,6 +19,7 @@ import {
   ClipboardList,
   Sparkles,
   AlertTriangle,
+  RefreshCw,
   Lock as LockIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -40,6 +41,7 @@ const navItems: Array<{ to: string; label: string; icon: typeof LayoutDashboard;
   { to: "/manager/suppliers", label: "Suppliers & PO", icon: Truck },
   { to: "/manager/forecast", label: "AI Forecast", icon: Sparkles },
   { to: "/transactions", label: "Transaction Log", icon: ClipboardList },
+  { to: "/sync", label: "Sync Queue", icon: RefreshCw },
   { to: "/shift", label: "Shift Close (Z)", icon: LockIcon },
   { to: "/orders", label: "Orders", icon: ClipboardList },
 

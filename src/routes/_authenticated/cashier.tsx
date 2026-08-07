@@ -15,7 +15,9 @@ import { toast } from "sonner";
 import { formatCurrency } from "@/lib/format";
 import { ShoppingCart, Search, Trash2, Plus, Minus, Package as PackageIcon, BookOpen, ClipboardList, HelpCircle, RefreshCw, CheckCircle2, AlertTriangle, X, Lock as LockIcon } from "lucide-react";
 import { enqueueSale, flushQueue, getQueue } from "@/lib/offline-queue";
-import { appendLog } from "@/lib/transaction-log";
+import { appendLog, type TxLogEntry } from "@/lib/transaction-log";
+import { printReceipt, downloadReceipt, receiptText, receiptNumber } from "@/lib/receipt";
+import { runSync } from "@/lib/sync-manager";
 import { recordSaleDelta, hydrateStockDeltas } from "@/lib/local-stock";
 import { CASHIER_NAME, setMode } from "@/lib/session-mode";
 
@@ -61,6 +63,9 @@ function CashierScreen() {
   const [queuedCount, setQueuedCount] = useState<number>(() => getQueue().length);
   const [syncStatus, setSyncStatus] = useState<SyncStatus>("idle");
   const [lastSync, setLastSync] = useState<string | null>(null);
+  const [amountPaid, setAmountPaid] = useState("");
+  const [receipt, setReceipt] = useState<{ entry: TxLogEntry; amountPaid: number; change: number } | null>(null);
+
 
   const variants = useQuery({
     queryKey: ["cashier", "variants"],
@@ -263,88 +268,58 @@ function CashierScreen() {
         subtotal: Number(l.variant.price) * l.qty,
       }));
       const cashierName = profile?.full_name ?? CASHIER_NAME;
-      const clientId = crypto.randomUUID?.() ?? `${Date.now()}-${Math.random()}`;
+      const saleId = crypto.randomUUID?.() ?? `${Date.now()}-${Math.random()}`;
 
-      const queueLocally = () => {
-        const entry = enqueueSale({
-          cashier_id: session?.user.id ?? "",
-          cashier_name: cashierName,
-          total_amount: subtotal,
-          payment_type: payment,
-          items,
-        });
-        appendLog({
-          id: entry.id,
-          created_at: entry.queued_at,
-          total: subtotal,
-          payment_type: payment,
-          cashier_name: cashierName,
-          items: logItems,
-          status: "queued",
-        });
-        // Reduce on-hand counts locally right away so offline stock stays accurate.
-        recordSaleDelta(entry.id, items);
-        setQueuedCount(getQueue().length);
-        setSyncStatus("idle");
-        return { queued: true as const };
-      };
+      // LOCAL FIRST: the sale is committed to this device before anything else.
+      // The till never waits for the cloud, so a sale can never hang on the network.
+      const entry = enqueueSale({
+        id: saleId,
+        cashier_id: session?.user.id ?? "",
+        cashier_name: cashierName,
+        total_amount: subtotal,
+        payment_type: payment,
+        items,
+      });
+      const logEntry = appendLog({
+        id: entry.id,
+        created_at: entry.queued_at,
+        total: subtotal,
+        payment_type: payment,
+        cashier_name: cashierName,
+        items: logItems,
+        status: "queued",
+      });
+      // Reduce on-hand counts locally right away so offline stock stays accurate.
+      recordSaleDelta(entry.id, items);
+      setQueuedCount(getQueue().length);
 
-      // Offline OR no session yet -> queue locally. Sync will attach a valid auth uid later.
-      const reallyOnline = typeof navigator !== "undefined" ? navigator.onLine : online;
-      if (!reallyOnline || !session?.user.id) return queueLocally();
-
-      // Online path, but never let a dead/slow connection hang the till.
-      const withTimeout = <T,>(p: PromiseLike<T>, ms = 6000) =>
-        Promise.race([
-          Promise.resolve(p),
-          new Promise<never>((_, rej) => setTimeout(() => rej(new Error("timeout")), ms)),
-        ]);
-
-      try {
-        const { data: sale, error: saleErr } = await withTimeout(
-          supabase.from("sales").insert({
-            cashier_id: session.user.id,
-            cashier_name: cashierName,
-            client_id: clientId,
-            total_amount: subtotal,
-            payment_type: payment,
-          }).select("id").single(),
-        );
-        if (saleErr) throw saleErr;
-
-        const { error: itemsErr } = await withTimeout(
-          supabase.from("sale_items").insert(items.map((i) => ({ ...i, sale_id: sale.id }))),
-        );
-        if (itemsErr) throw itemsErr;
-        appendLog({
-          id: sale.id,
-          total: subtotal,
-          payment_type: payment,
-          cashier_name: cashierName,
-          items: logItems,
-          status: "synced",
-        });
-        return { queued: false as const };
-      } catch {
-        // Network failed or timed out -> keep the sale safe locally.
-        return queueLocally();
-      }
-
+      return { entry: logEntry };
     },
     onMutate: () => setCheckingOut(true),
     onSettled: () => setCheckingOut(false),
     onSuccess: (res) => {
-      if (res?.queued) {
-        toast.success(`Sale saved on this device - will sync when online (${formatCurrency(subtotal)})`);
-      } else {
-        toast.success(`Sale of ${formatCurrency(subtotal)} recorded`);
-      }
+      const paid = Number(amountPaid);
+      setReceipt({
+        entry: res.entry,
+        amountPaid: Number.isFinite(paid) && paid > 0 ? paid : subtotal,
+        change: Number.isFinite(paid) && paid > subtotal ? paid - subtotal : 0,
+      });
+      toast.success(`Sale completed - ${formatCurrency(res.entry.total)}`);
       setCart([]);
-      if (!res?.queued) qc.invalidateQueries({ queryKey: ["cashier"] });
+      setAmountPaid("");
+      // Background upload; failures simply stay queued and retry automatically.
+      if (typeof navigator === "undefined" || navigator.onLine) {
+        void runSync().then(() => {
+          setQueuedCount(getQueue().length);
+          setLastSync(new Date().toISOString());
+          qc.invalidateQueries({ queryKey: ["cashier"] });
+        });
+      }
     },
 
     onError: (e: Error) => toast.error(e.message),
   });
+
 
 
   if (loading) return <div className="flex min-h-screen items-center justify-center text-muted-foreground">Loading...</div>;
@@ -380,6 +355,10 @@ function CashierScreen() {
                 <ClipboardList className="mr-2 h-4 w-4" /> Transaction log
               </Button>
             </Link>
+            <Link to="/sync">
+              <Button variant="outline" size="sm">Sync queue</Button>
+            </Link>
+
             <Link to="/shift">
               <Button variant="outline" size="sm">
                 <LockIcon className="mr-2 h-4 w-4" /> Shift close
@@ -567,13 +546,28 @@ function CashierScreen() {
 
             </Select>
           </div>
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-muted-foreground">Amount paid (optional)</label>
+            <Input
+              inputMode="decimal"
+              placeholder={formatCurrency(subtotal)}
+              value={amountPaid}
+              onChange={(e) => setAmountPaid(e.target.value)}
+            />
+            {Number(amountPaid) > subtotal && (
+              <p className="text-xs font-medium text-emerald-700">Change: {formatCurrency(Number(amountPaid) - subtotal)}</p>
+            )}
+          </div>
           <div className="flex items-center justify-between text-lg font-bold">
             <span>Total</span>
             <span>{formatCurrency(subtotal)}</span>
           </div>
           <Button className="w-full" size="lg" disabled={cart.length === 0 || checkingOut} onClick={() => checkout.mutate()}>
-            {checkingOut ? "Processing..." : online ? "Complete sale" : "Queue sale (offline)"}
+            {checkingOut ? "Saving..." : "Complete sale"}
           </Button>
+          <p className="text-center text-[11px] text-muted-foreground">
+            Sales are saved on this device first, then uploaded automatically.
+          </p>
         </div>
       </aside>
 
@@ -589,6 +583,33 @@ function CashierScreen() {
           <VoiceCommandHelp />
         </DialogContent>
       </Dialog>
+      <Dialog open={receipt !== null} onOpenChange={(o) => { if (!o) setReceipt(null); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle>Sale completed</DialogTitle></DialogHeader>
+          {receipt && (
+            <div className="space-y-3">
+              <div className="rounded-lg border border-dashed border-border bg-accent/30 p-3 text-xs">
+                <pre className="whitespace-pre-wrap font-mono leading-relaxed">
+                  {receiptText(receipt.entry, { amountPaid: receipt.amountPaid, change: receipt.change })}
+                </pre>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Receipt {receiptNumber(receipt.entry)} is stored on this device. Reprint it any time from the transaction log.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <Button className="flex-1" onClick={() => printReceipt(receipt.entry, { amountPaid: receipt.amountPaid, change: receipt.change })}>
+                  Print receipt
+                </Button>
+                <Button variant="outline" className="flex-1" onClick={() => downloadReceipt(receipt.entry, { amountPaid: receipt.amountPaid, change: receipt.change })}>
+                  Download
+                </Button>
+                <Button variant="ghost" onClick={() => setReceipt(null)}>Next sale</Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
     </div>
   );
 }

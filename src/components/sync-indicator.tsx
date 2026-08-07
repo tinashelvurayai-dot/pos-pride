@@ -18,13 +18,20 @@ export function SyncIndicator({ className = "" }: { className?: string }) {
     <div className={`flex flex-wrap items-center gap-2 ${className}`}>
       {online ? (
         <Badge variant="outline" className="gap-1 border-emerald-300 bg-emerald-50 text-emerald-700">
-          <Wifi className="h-3 w-3" /> Online
+          <Wifi className="h-3 w-3" /> 🟢 Online
         </Badge>
       ) : (
         <Badge variant="destructive" className="gap-1">
-          <WifiOff className="h-3 w-3" /> Offline · sales saved locally
+          <WifiOff className="h-3 w-3" /> 🔴 Offline
         </Badge>
       )}
+      <span className="text-xs text-muted-foreground">
+        {online
+          ? pending > 0
+            ? "Connected - uploading stored sales."
+            : "Connected - All data synchronized."
+          : "Offline Mode - Sales are being stored safely on this device."}
+      </span>
       {pending > 0 && (
         <button
           type="button"

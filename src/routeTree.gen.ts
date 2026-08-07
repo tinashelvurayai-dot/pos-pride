@@ -13,6 +13,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedTransactionsRouteImport } from './routes/_authenticated/transactions'
+import { Route as AuthenticatedSyncRouteImport } from './routes/_authenticated/sync'
 import { Route as AuthenticatedShiftRouteImport } from './routes/_authenticated/shift'
 import { Route as AuthenticatedOrdersRouteImport } from './routes/_authenticated/orders'
 import { Route as AuthenticatedManagerRouteImport } from './routes/_authenticated/manager'
@@ -49,6 +50,11 @@ const AuthenticatedTransactionsRoute =
     path: '/transactions',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedSyncRoute = AuthenticatedSyncRouteImport.update({
+  id: '/sync',
+  path: '/sync',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedShiftRoute = AuthenticatedShiftRouteImport.update({
   id: '/shift',
   path: '/shift',
@@ -143,6 +149,7 @@ export interface FileRoutesByFullPath {
   '/manager': typeof AuthenticatedManagerRouteWithChildren
   '/orders': typeof AuthenticatedOrdersRoute
   '/shift': typeof AuthenticatedShiftRoute
+  '/sync': typeof AuthenticatedSyncRoute
   '/transactions': typeof AuthenticatedTransactionsRoute
   '/manager/alerts': typeof AuthenticatedManagerAlertsRoute
   '/manager/cash': typeof AuthenticatedManagerCashRoute
@@ -162,6 +169,7 @@ export interface FileRoutesByTo {
   '/cashier': typeof AuthenticatedCashierRoute
   '/orders': typeof AuthenticatedOrdersRoute
   '/shift': typeof AuthenticatedShiftRoute
+  '/sync': typeof AuthenticatedSyncRoute
   '/transactions': typeof AuthenticatedTransactionsRoute
   '/manager/alerts': typeof AuthenticatedManagerAlertsRoute
   '/manager/cash': typeof AuthenticatedManagerCashRoute
@@ -184,6 +192,7 @@ export interface FileRoutesById {
   '/_authenticated/manager': typeof AuthenticatedManagerRouteWithChildren
   '/_authenticated/orders': typeof AuthenticatedOrdersRoute
   '/_authenticated/shift': typeof AuthenticatedShiftRoute
+  '/_authenticated/sync': typeof AuthenticatedSyncRoute
   '/_authenticated/transactions': typeof AuthenticatedTransactionsRoute
   '/_authenticated/manager/alerts': typeof AuthenticatedManagerAlertsRoute
   '/_authenticated/manager/cash': typeof AuthenticatedManagerCashRoute
@@ -206,6 +215,7 @@ export interface FileRouteTypes {
     | '/manager'
     | '/orders'
     | '/shift'
+    | '/sync'
     | '/transactions'
     | '/manager/alerts'
     | '/manager/cash'
@@ -225,6 +235,7 @@ export interface FileRouteTypes {
     | '/cashier'
     | '/orders'
     | '/shift'
+    | '/sync'
     | '/transactions'
     | '/manager/alerts'
     | '/manager/cash'
@@ -246,6 +257,7 @@ export interface FileRouteTypes {
     | '/_authenticated/manager'
     | '/_authenticated/orders'
     | '/_authenticated/shift'
+    | '/_authenticated/sync'
     | '/_authenticated/transactions'
     | '/_authenticated/manager/alerts'
     | '/_authenticated/manager/cash'
@@ -294,6 +306,13 @@ declare module '@tanstack/react-router' {
       path: '/transactions'
       fullPath: '/transactions'
       preLoaderRoute: typeof AuthenticatedTransactionsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/sync': {
+      id: '/_authenticated/sync'
+      path: '/sync'
+      fullPath: '/sync'
+      preLoaderRoute: typeof AuthenticatedSyncRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/shift': {
@@ -440,6 +459,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedManagerRoute: typeof AuthenticatedManagerRouteWithChildren
   AuthenticatedOrdersRoute: typeof AuthenticatedOrdersRoute
   AuthenticatedShiftRoute: typeof AuthenticatedShiftRoute
+  AuthenticatedSyncRoute: typeof AuthenticatedSyncRoute
   AuthenticatedTransactionsRoute: typeof AuthenticatedTransactionsRoute
 }
 
@@ -448,6 +468,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedManagerRoute: AuthenticatedManagerRouteWithChildren,
   AuthenticatedOrdersRoute: AuthenticatedOrdersRoute,
   AuthenticatedShiftRoute: AuthenticatedShiftRoute,
+  AuthenticatedSyncRoute: AuthenticatedSyncRoute,
   AuthenticatedTransactionsRoute: AuthenticatedTransactionsRoute,
 }
 
@@ -463,3 +484,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
