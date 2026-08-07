@@ -355,6 +355,10 @@ function CashierScreen() {
                 <ClipboardList className="mr-2 h-4 w-4" /> Transaction log
               </Button>
             </Link>
+            <Link to="/sync">
+              <Button variant="outline" size="sm">Sync queue</Button>
+            </Link>
+
             <Link to="/shift">
               <Button variant="outline" size="sm">
                 <LockIcon className="mr-2 h-4 w-4" /> Shift close
