@@ -1,12 +1,10 @@
 // Offline sales queue.
-// Writes go to localStorage (synchronous, instantly readable by the UI) and are
-// mirrored into IndexedDB for durability. On boot we hydrate from IndexedDB in
-// case localStorage was cleared by the browser.
+// The in-memory cache is the checkout source of truth: local persistence is
+// mirrored without ever being allowed to delay a completed sale.
 import { supabase } from "@/integrations/supabase/client";
 import { IDB_KEYS, idbGet, idbSet } from "@/lib/offline-db";
 import { markLogStatus } from "@/lib/transaction-log";
 import { clearSaleDelta } from "@/lib/local-stock";
-
 
 const QUEUE_KEY = "tillpoint.offline-sales.v1";
 
@@ -20,7 +18,7 @@ export type QueuedSaleItem = {
 export type QueueStatus = "pending" | "uploading" | "failed";
 
 export type QueuedSale = {
-  id: string; // client-generated UUID, also used as the server idempotency key
+  id: string;
   cashier_id: string;
   cashier_name?: string;
   total_amount: number;
@@ -32,67 +30,80 @@ export type QueuedSale = {
   last_error?: string;
 };
 
-
 type Listener = (count: number) => void;
 const listeners = new Set<Listener>();
 
-export function subscribeQueue(fn: Listener): () => void {
-  listeners.add(fn);
-  return () => listeners.delete(fn);
-}
-
-function notify(list: QueuedSale[]) {
-  for (const fn of listeners) {
-    try { fn(list.length); } catch { /* noop */ }
-  }
-}
-
-function read(): QueuedSale[] {
+function readStorage(): QueuedSale[] {
+  if (typeof window === "undefined") return [];
   try {
-    const raw = localStorage.getItem(QUEUE_KEY);
+    const raw = window.localStorage.getItem(QUEUE_KEY);
     return raw ? (JSON.parse(raw) as QueuedSale[]) : [];
   } catch {
     return [];
   }
 }
-function write(list: QueuedSale[]) {
-  try { localStorage.setItem(QUEUE_KEY, JSON.stringify(list)); } catch { /* noop */ }
+
+let queueCache = readStorage();
+
+export function subscribeQueue(fn: Listener): () => void {
+  listeners.add(fn);
+  fn(queueCache.length);
+  return () => listeners.delete(fn);
+}
+
+function notify() {
+  for (const fn of listeners) {
+    try {
+      fn(queueCache.length);
+    } catch {
+      /* noop */
+    }
+  }
+}
+
+function persist(list: QueuedSale[]) {
+  queueCache = list;
+  try {
+    window.localStorage.setItem(QUEUE_KEY, JSON.stringify(list));
+  } catch {
+    /* best effort */
+  }
   void idbSet(IDB_KEYS.sales, list);
-  notify(list);
+  notify();
 }
 
 export function getQueue(): QueuedSale[] {
-  return read();
+  return queueCache.slice();
 }
 
 function patch(id: string, changes: Partial<QueuedSale>) {
-  write(read().map((s) => (s.id === id ? { ...s, ...changes } : s)));
+  persist(queueCache.map((s) => (s.id === id ? { ...s, ...changes } : s)));
 }
 
-/** Restore the queue from IndexedDB when localStorage lost it (called once at boot). */
+/** Restore IndexedDB data without blocking the checkout path. */
 export async function hydrateQueueFromIdb(): Promise<number> {
-  const local = read();
+  const local = queueCache;
   const durable = (await idbGet<QueuedSale[]>(IDB_KEYS.sales)) ?? [];
   const byId = new Map<string, QueuedSale>();
   for (const s of [...durable, ...local]) byId.set(s.id, s);
   const merged = [...byId.values()]
     .map((s) => (s.status === "uploading" ? { ...s, status: "pending" as const } : s))
     .sort((a, b) => a.queued_at.localeCompare(b.queued_at));
-  write(merged);
+  persist(merged);
   return merged.length;
 }
 
-export function enqueueSale(sale: Omit<QueuedSale, "id" | "queued_at"> & { id?: string }): QueuedSale {
+export function enqueueSale(
+  sale: Omit<QueuedSale, "id" | "queued_at"> & { id?: string },
+): QueuedSale {
   const entry: QueuedSale = {
     ...sale,
-    id: sale.id ?? crypto.randomUUID(),
+    id: sale.id ?? crypto.randomUUID?.() ?? `${Date.now()}-${Math.random()}`,
     queued_at: new Date().toISOString(),
     status: "pending",
     attempts: 0,
   };
-  const list = read();
-  list.push(entry);
-  write(list);
+  persist([...queueCache, entry]);
   return entry;
 }
 
@@ -113,8 +124,6 @@ async function ensureSession(): Promise<string | null> {
 export async function uploadSale(q: QueuedSale, uid: string): Promise<boolean> {
   try {
     patch(q.id, { status: "uploading" });
-    // client_id is a unique idempotency key: a retried upload can never
-    // create a second copy of the same sale.
     const { data: existing } = await supabase
       .from("sales")
       .select("id")
@@ -140,7 +149,6 @@ export async function uploadSale(q: QueuedSale, uid: string): Promise<boolean> {
       if (itemsErr) throw itemsErr;
     }
 
-    // Confirmed on the server -> only now drop the local copies.
     markLogStatus(q.id, "synced");
     clearSaleDelta(q.id);
     return true;
@@ -155,33 +163,30 @@ export async function uploadSale(q: QueuedSale, uid: string): Promise<boolean> {
   }
 }
 
-/** Retry a single failed/pending sale on demand. */
 export async function retrySale(id: string): Promise<boolean> {
-  const q = read().find((s) => s.id === id);
+  const q = queueCache.find((s) => s.id === id);
   if (!q) return false;
   const uid = await ensureSession();
   if (!uid) return false;
   const ok = await uploadSale(q, uid);
-  if (ok) write(read().filter((s) => s.id !== id));
+  if (ok) persist(queueCache.filter((s) => s.id !== id));
   return ok;
 }
 
 export async function flushQueue(): Promise<{ ok: number; failed: number }> {
-  const list = read();
+  const list = queueCache.slice();
   if (list.length === 0) return { ok: 0, failed: 0 };
-
-  // Ensure we have an authenticated session so RLS (cashier_id = auth.uid()) passes.
   const uid = await ensureSession();
   if (!uid) return { ok: 0, failed: list.length };
 
   let ok = 0;
   const uploaded = new Set<string>();
   for (const q of list) {
-    const success = await uploadSale(q, uid);
-    if (success) { uploaded.add(q.id); ok++; }
+    if (await uploadSale(q, uid)) {
+      uploaded.add(q.id);
+      ok++;
+    }
   }
-
-  const remaining = read().filter((s) => !uploaded.has(s.id));
-  write(remaining);
-  return { ok, failed: remaining.length };
+  persist(queueCache.filter((s) => !uploaded.has(s.id)));
+  return { ok, failed: queueCache.length };
 }
