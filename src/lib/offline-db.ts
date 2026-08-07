@@ -37,3 +37,13 @@ export async function idbDel(key: string): Promise<void> {
     /* noop */
   }
 }
+
+/** Ask the browser to protect the till's offline data from eviction. */
+export async function requestPersistentStorage(): Promise<boolean> {
+  if (typeof navigator === "undefined" || !navigator.storage?.persist) return false;
+  try {
+    return await navigator.storage.persist();
+  } catch {
+    return false;
+  }
+}

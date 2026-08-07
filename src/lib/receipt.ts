@@ -3,7 +3,7 @@
 import type { TxLogEntry } from "@/lib/transaction-log";
 import { formatCurrency } from "@/lib/format";
 
-export const SHOP_NAME = "TillPoint Shop";
+export const SHOP_NAME = "Green Shop";
 
 export type ReceiptExtras = { amountPaid?: number; change?: number };
 
@@ -27,7 +27,8 @@ export function receiptText(entry: TxLogEntry, extras: ReceiptExtras = {}): stri
   }
   lines.push("-".repeat(34));
   lines.push(`TOTAL            ${formatCurrency(entry.total)}`);
-  if (extras.amountPaid != null) lines.push(`PAID             ${formatCurrency(extras.amountPaid)}`);
+  if (extras.amountPaid != null)
+    lines.push(`PAID             ${formatCurrency(extras.amountPaid)}`);
   if (extras.change != null) lines.push(`CHANGE           ${formatCurrency(extras.change)}`);
   lines.push(`Payment: ${entry.payment_type}`);
   lines.push("-".repeat(34));
@@ -36,9 +37,7 @@ export function receiptText(entry: TxLogEntry, extras: ReceiptExtras = {}): stri
 }
 
 export function receiptHtml(entry: TxLogEntry, extras: ReceiptExtras = {}): string {
-  const body = receiptText(entry, extras)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;");
+  const body = receiptText(entry, extras).replace(/&/g, "&amp;").replace(/</g, "&lt;");
   return `<!doctype html><html><head><meta charset="utf-8"><title>${receiptNumber(entry)}</title>
 <style>@page{margin:6mm}body{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;white-space:pre;margin:0}</style>
 </head><body>${body}</body></html>`;
@@ -57,13 +56,27 @@ export function printReceipt(entry: TxLogEntry, extras: ReceiptExtras = {}) {
   frame.style.border = "0";
   document.body.appendChild(frame);
   const doc = frame.contentDocument;
-  if (!doc) { document.body.removeChild(frame); return; }
+  if (!doc) {
+    document.body.removeChild(frame);
+    return;
+  }
   doc.open();
   doc.write(html);
   doc.close();
   const done = () => {
-    try { frame.contentWindow?.focus(); frame.contentWindow?.print(); } catch { /* noop */ }
-    setTimeout(() => { try { document.body.removeChild(frame); } catch { /* noop */ } }, 1000);
+    try {
+      frame.contentWindow?.focus();
+      frame.contentWindow?.print();
+    } catch {
+      /* noop */
+    }
+    setTimeout(() => {
+      try {
+        document.body.removeChild(frame);
+      } catch {
+        /* noop */
+      }
+    }, 1000);
   };
   if (doc.readyState === "complete") done();
   else frame.onload = done;

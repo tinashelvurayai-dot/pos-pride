@@ -71,10 +71,10 @@ export function readLog(): TxLogEntry[] {
 }
 
 export async function hydrateLogFromIdb(): Promise<TxLogEntry[]> {
-  const local = logCache;
   const durable = (await idbGet<TxLogEntry[]>(IDB_LOG_KEY)) ?? [];
   const byId = new Map<string, TxLogEntry>();
-  for (const e of [...durable, ...local]) byId.set(e.id, e);
+  // Use the latest in-memory cache so hydration cannot erase a fresh sale.
+  for (const e of [...durable, ...logCache]) byId.set(e.id, e);
   const merged = [...byId.values()].sort((a, b) => b.created_at.localeCompare(a.created_at));
   persist(merged);
   return merged;

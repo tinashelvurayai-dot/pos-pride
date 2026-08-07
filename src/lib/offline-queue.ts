@@ -82,10 +82,11 @@ function patch(id: string, changes: Partial<QueuedSale>) {
 
 /** Restore IndexedDB data without blocking the checkout path. */
 export async function hydrateQueueFromIdb(): Promise<number> {
-  const local = queueCache;
   const durable = (await idbGet<QueuedSale[]>(IDB_KEYS.sales)) ?? [];
   const byId = new Map<string, QueuedSale>();
-  for (const s of [...durable, ...local]) byId.set(s.id, s);
+  // Merge against the latest cache after IndexedDB resolves so a sale entered
+  // while hydration is in flight can never be overwritten by stale data.
+  for (const s of [...durable, ...queueCache]) byId.set(s.id, s);
   const merged = [...byId.values()]
     .map((s) => (s.status === "uploading" ? { ...s, status: "pending" as const } : s))
     .sort((a, b) => a.queued_at.localeCompare(b.queued_at));
