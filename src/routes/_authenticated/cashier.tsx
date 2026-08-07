@@ -15,7 +15,9 @@ import { toast } from "sonner";
 import { formatCurrency } from "@/lib/format";
 import { ShoppingCart, Search, Trash2, Plus, Minus, Package as PackageIcon, BookOpen, ClipboardList, HelpCircle, RefreshCw, CheckCircle2, AlertTriangle, X, Lock as LockIcon } from "lucide-react";
 import { enqueueSale, flushQueue, getQueue } from "@/lib/offline-queue";
-import { appendLog } from "@/lib/transaction-log";
+import { appendLog, type TxLogEntry } from "@/lib/transaction-log";
+import { printReceipt, downloadReceipt, receiptText, receiptNumber } from "@/lib/receipt";
+import { runSync } from "@/lib/sync-manager";
 import { recordSaleDelta, hydrateStockDeltas } from "@/lib/local-stock";
 import { CASHIER_NAME, setMode } from "@/lib/session-mode";
 
@@ -61,6 +63,9 @@ function CashierScreen() {
   const [queuedCount, setQueuedCount] = useState<number>(() => getQueue().length);
   const [syncStatus, setSyncStatus] = useState<SyncStatus>("idle");
   const [lastSync, setLastSync] = useState<string | null>(null);
+  const [amountPaid, setAmountPaid] = useState("");
+  const [receipt, setReceipt] = useState<{ entry: TxLogEntry; amountPaid: number; change: number } | null>(null);
+
 
   const variants = useQuery({
     queryKey: ["cashier", "variants"],
