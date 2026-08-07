@@ -7,20 +7,40 @@ import { useOnline } from "@/hooks/use-online";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { SignOutButton } from "@/components/sign-out-button";
 import { ManagerGateLogo } from "@/components/manager-gate-logo";
 import { toast } from "sonner";
 import { formatCurrency } from "@/lib/format";
-import { ShoppingCart, Search, Trash2, Plus, Minus, Package as PackageIcon, BookOpen, ClipboardList, HelpCircle, RefreshCw, CheckCircle2, AlertTriangle, X, Lock as LockIcon } from "lucide-react";
+import {
+  ShoppingCart,
+  Search,
+  Trash2,
+  Plus,
+  Minus,
+  Package as PackageIcon,
+  BookOpen,
+  ClipboardList,
+  HelpCircle,
+  RefreshCw,
+  CheckCircle2,
+  AlertTriangle,
+  X,
+  Lock as LockIcon,
+} from "lucide-react";
 import { enqueueSale, flushQueue, getQueue } from "@/lib/offline-queue";
 import { appendLog, type TxLogEntry } from "@/lib/transaction-log";
 import { printReceipt, downloadReceipt, receiptText, receiptNumber } from "@/lib/receipt";
 import { runSync } from "@/lib/sync-manager";
 import { recordSaleDelta, hydrateStockDeltas } from "@/lib/local-stock";
 import { CASHIER_NAME, setMode } from "@/lib/session-mode";
-
 
 import { IDB_KEYS, idbGet, idbSet } from "@/lib/offline-db";
 import { SyncIndicator } from "@/components/sync-indicator";
@@ -64,20 +84,29 @@ function CashierScreen() {
   const [syncStatus, setSyncStatus] = useState<SyncStatus>("idle");
   const [lastSync, setLastSync] = useState<string | null>(null);
   const [amountPaid, setAmountPaid] = useState("");
-  const [receipt, setReceipt] = useState<{ entry: TxLogEntry; amountPaid: number; change: number } | null>(null);
-
+  const [receipt, setReceipt] = useState<{
+    entry: TxLogEntry;
+    amountPaid: number;
+    change: number;
+  } | null>(null);
 
   const variants = useQuery({
     queryKey: ["cashier", "variants"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("product_variants")
-        .select("id, variant_name, size, flavour, price, image_url, active, product:products(id, name, category, image_url), stock(quantity, available)")
+        .select(
+          "id, variant_name, size, flavour, price, image_url, active, product:products(id, name, category, image_url), stock(quantity, available)",
+        )
         .eq("active", true)
         .order("variant_name");
       if (error) throw error;
       const list = (data as unknown as Variant[]).filter((v) => v.product);
-      try { localStorage.setItem(OFFLINE_CACHE_KEY, JSON.stringify(list)); } catch { /* noop */ }
+      try {
+        localStorage.setItem(OFFLINE_CACHE_KEY, JSON.stringify(list));
+      } catch {
+        /* noop */
+      }
       void idbSet(IDB_KEYS.catalog, list);
       return list;
     },
@@ -85,19 +114,22 @@ function CashierScreen() {
 
   const [idbCatalog, setIdbCatalog] = useState<Variant[]>([]);
   useEffect(() => {
-    void idbGet<Variant[]>(IDB_KEYS.catalog).then((c) => { if (c?.length) setIdbCatalog(c); });
+    void idbGet<Variant[]>(IDB_KEYS.catalog).then((c) => {
+      if (c?.length) setIdbCatalog(c);
+    });
     // Opening the till puts this device in cashier mode (manager rights drop away).
     setMode("cashier");
     void hydrateStockDeltas();
   }, []);
-
 
   const offlineList = useMemo<Variant[]>(() => {
     try {
       const raw = localStorage.getItem(OFFLINE_CACHE_KEY);
       const parsed = raw ? (JSON.parse(raw) as Variant[]) : [];
       return parsed.length ? parsed : idbCatalog;
-    } catch { return idbCatalog; }
+    } catch {
+      return idbCatalog;
+    }
   }, [variants.data, idbCatalog]);
 
   const list: Variant[] = variants.data ?? offlineList;
@@ -105,7 +137,11 @@ function CashierScreen() {
   const settings = useQuery({
     queryKey: ["cashier", "settings"],
     queryFn: async () => {
-      const { data } = await supabase.from("app_settings").select("show_cashier_manual").eq("id", true).maybeSingle();
+      const { data } = await supabase
+        .from("app_settings")
+        .select("show_cashier_manual")
+        .eq("id", true)
+        .maybeSingle();
       return data ?? { show_cashier_manual: true };
     },
   });
@@ -115,41 +151,47 @@ function CashierScreen() {
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim();
     if (!q) return [] as Variant[];
-    return list.filter((v) =>
-      v.variant_name.toLowerCase().includes(q) || v.product?.name.toLowerCase().includes(q) || v.product?.category?.toLowerCase().includes(q)
+    return list.filter(
+      (v) =>
+        v.variant_name.toLowerCase().includes(q) ||
+        v.product?.name.toLowerCase().includes(q) ||
+        v.product?.category?.toLowerCase().includes(q),
     );
   }, [search, list]);
 
   const subtotal = cart.reduce((s, l) => s + Number(l.variant.price) * l.qty, 0);
 
-  const syncOfflineQueue = useCallback(async (showEmptyToast = false) => {
-    if (!online) {
-      toast.error("You are offline. Sync will start when the connection returns.");
-      return;
-    }
-    const q = getQueue();
-    setQueuedCount(q.length);
-    if (q.length === 0) {
-      setSyncStatus("synced");
+  const syncOfflineQueue = useCallback(
+    async (showEmptyToast = false) => {
+      if (!online) {
+        toast.error("You are offline. Sync will start when the connection returns.");
+        return;
+      }
+      const q = getQueue();
+      setQueuedCount(q.length);
+      if (q.length === 0) {
+        setSyncStatus("synced");
+        setLastSync(new Date().toISOString());
+        if (showEmptyToast) toast.success("Everything is synced");
+        return;
+      }
+      setSyncStatus("syncing");
+      toast.info(`Syncing ${q.length} offline sale${q.length === 1 ? "" : "s"}...`);
+      const res = await flushQueue();
+      const remaining = getQueue().length;
+      setQueuedCount(remaining);
       setLastSync(new Date().toISOString());
-      if (showEmptyToast) toast.success("Everything is synced");
-      return;
-    }
-    setSyncStatus("syncing");
-    toast.info(`Syncing ${q.length} offline sale${q.length === 1 ? "" : "s"}...`);
-    const res = await flushQueue();
-    const remaining = getQueue().length;
-    setQueuedCount(remaining);
-    setLastSync(new Date().toISOString());
-    if (res.failed > 0) {
-      setSyncStatus("failed");
-      toast.error(`${res.failed} sale${res.failed === 1 ? "" : "s"} could not sync - will retry`);
-    } else {
-      setSyncStatus("synced");
-      if (res.ok > 0) toast.success(`${res.ok} offline sale${res.ok === 1 ? "" : "s"} synced`);
-    }
-    qc.invalidateQueries({ queryKey: ["cashier"] });
-  }, [online, qc]);
+      if (res.failed > 0) {
+        setSyncStatus("failed");
+        toast.error(`${res.failed} sale${res.failed === 1 ? "" : "s"} could not sync - will retry`);
+      } else {
+        setSyncStatus("synced");
+        if (res.ok > 0) toast.success(`${res.ok} offline sale${res.ok === 1 ? "" : "s"} synced`);
+      }
+      qc.invalidateQueries({ queryKey: ["cashier"] });
+    },
+    [online, qc],
+  );
 
   // Auto-sync queued sales when back online
   useEffect(() => {
@@ -169,17 +211,20 @@ function CashierScreen() {
     });
   }
 
-
   function changeQty(id: string, delta: number) {
-    setCart((prev) => prev.flatMap((l) => {
-      if (l.variant.id !== id) return [l];
-      const next = l.qty + delta;
-      if (next <= 0) return [];
-      return [{ ...l, qty: next }];
-    }));
+    setCart((prev) =>
+      prev.flatMap((l) => {
+        if (l.variant.id !== id) return [l];
+        const next = l.qty + delta;
+        if (next <= 0) return [];
+        return [{ ...l, qty: next }];
+      }),
+    );
   }
 
-  function removeLine(id: string) { setCart((prev) => prev.filter((l) => l.variant.id !== id)); }
+  function removeLine(id: string) {
+    setCart((prev) => prev.filter((l) => l.variant.id !== id));
+  }
 
   function cancelSale() {
     if (cart.length === 0) return;
@@ -188,13 +233,13 @@ function CashierScreen() {
     toast.info("Sale cancelled");
   }
 
-
   function findVariantByPhrase(phrase: string): Variant | null {
     const q = phrase.toLowerCase().trim();
     if (!q) return null;
     const scored = list
       .map((v) => {
-        const hay = `${v.product?.name ?? ""} ${v.variant_name} ${v.size ?? ""} ${v.flavour ?? ""}`.toLowerCase();
+        const hay =
+          `${v.product?.name ?? ""} ${v.variant_name} ${v.size ?? ""} ${v.flavour ?? ""}`.toLowerCase();
         let score = 0;
         for (const w of q.split(/\s+/).filter(Boolean)) if (hay.includes(w)) score++;
         return { v, score };
@@ -205,7 +250,10 @@ function CashierScreen() {
   }
 
   function handleVoice(raw: string) {
-    const text = raw.toLowerCase().trim().replace(/[.,!?]/g, "");
+    const text = raw
+      .toLowerCase()
+      .trim()
+      .replace(/[.,!?]/g, "");
     if (!text) return;
 
     // "new" / "new sale" / "clear" -> reset cart
@@ -221,37 +269,60 @@ function CashierScreen() {
       return;
     }
     // "cash" / "mobile" / "ecocash"
-    if (/^cash$/.test(text)) { setPayment("cash"); toast.info("Payment: Cash"); return; }
-    if (/^(mobile|ecocash|eco cash)$/.test(text)) { setPayment("mobile"); toast.info("Payment: EcoCash / Mobile"); return; }
+    if (/^cash$/.test(text)) {
+      setPayment("cash");
+      toast.info("Payment: Cash");
+      return;
+    }
+    if (/^(mobile|ecocash|eco cash)$/.test(text)) {
+      setPayment("mobile");
+      toast.info("Payment: EcoCash / Mobile");
+      return;
+    }
 
     // "remove <phrase>" -> remove matching cart line
     const rm = text.match(/^remove\s+(.+)$/);
     if (rm) {
-      const line = cart.find((l) => `${l.variant.product?.name} ${l.variant.variant_name}`.toLowerCase().includes(rm[1]));
-      if (line) { removeLine(line.variant.id); toast.success(`Removed ${line.variant.product?.name}`); }
-      else toast.error(`Not in cart: ${rm[1]}`);
+      const line = cart.find((l) =>
+        `${l.variant.product?.name} ${l.variant.variant_name}`.toLowerCase().includes(rm[1]),
+      );
+      if (line) {
+        removeLine(line.variant.id);
+        toast.success(`Removed ${line.variant.product?.name}`);
+      } else toast.error(`Not in cart: ${rm[1]}`);
       return;
     }
     // "search <phrase>"
     const sr = text.match(/^(search|find)\s+(.+)$/);
-    if (sr) { setSearch(sr[2]); return; }
+    if (sr) {
+      setSearch(sr[2]);
+      return;
+    }
 
     // "add <n> <phrase>" or "<n> <phrase>" or "add <phrase>"
     const addN = text.match(/^(?:add\s+)?(\d+)\s+(.+)$/);
     const addPhrase = text.match(/^add\s+(.+)$/);
     let qty = 1;
     let phrase = text;
-    if (addN) { qty = Math.max(1, parseInt(addN[1], 10)); phrase = addN[2]; }
-    else if (addPhrase) { phrase = addPhrase[1]; }
+    if (addN) {
+      qty = Math.max(1, parseInt(addN[1], 10));
+      phrase = addN[2];
+    } else if (addPhrase) {
+      phrase = addPhrase[1];
+    }
 
     const v = findVariantByPhrase(phrase);
-    if (!v) { setSearch(phrase); toast.info(`Searching "${phrase}"`); return; }
+    if (!v) {
+      setSearch(phrase);
+      toast.info(`Searching "${phrase}"`);
+      return;
+    }
     for (let i = 0; i < qty; i++) addToCart(v);
     toast.success(`Added ${qty} × ${v.product?.name}`);
   }
 
-  const checkout = useMutation({
-    mutationFn: async () => {
+  const checkout = useMutation<{ entry: TxLogEntry }, Error, void>({
+    mutationFn: () => {
       if (cart.length === 0) throw new Error("Cart is empty");
 
       const items = cart.map((l) => ({
@@ -304,7 +375,11 @@ function CashierScreen() {
         amountPaid: Number.isFinite(paid) && paid > 0 ? paid : subtotal,
         change: Number.isFinite(paid) && paid > subtotal ? paid - subtotal : 0,
       });
-      toast.success(`Sale completed - ${formatCurrency(res.entry.total)}`);
+      toast.success(
+        online
+          ? `Sale completed - ${formatCurrency(res.entry.total)}`
+          : `Sale saved on this device - ${formatCurrency(res.entry.total)}`,
+      );
       setCart([]);
       setAmountPaid("");
       // Background upload; failures simply stay queued and retry automatically.
@@ -320,12 +395,14 @@ function CashierScreen() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-
-
-  if (loading) return <div className="flex min-h-screen items-center justify-center text-muted-foreground">Loading...</div>;
+  if (loading)
+    return (
+      <div className="flex min-h-screen items-center justify-center text-muted-foreground">
+        Loading...
+      </div>
+    );
   // Cashier mode is always allowed here; the manager reaches their console
   // through the secret code gate instead of an automatic redirect.
-
 
   const showManual = settings.data?.show_cashier_manual !== false;
 
@@ -336,14 +413,24 @@ function CashierScreen() {
           <div className="flex items-center gap-3">
             <ManagerGateLogo />
             <div className="hidden sm:block border-l border-border pl-3">
-              <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Cashier</div>
+              <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                Green Shop · Cashier
+              </div>
               <div className="text-sm font-semibold">{profile?.full_name}</div>
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <SyncIndicator />
-            <Button variant="outline" size="sm" onClick={() => syncOfflineQueue(true)} disabled={!online || syncStatus === "syncing"}>
-              <RefreshCw className={`mr-2 h-4 w-4 ${syncStatus === "syncing" ? "animate-spin" : ""}`} /> Sync
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => syncOfflineQueue(true)}
+              disabled={!online || syncStatus === "syncing"}
+            >
+              <RefreshCw
+                className={`mr-2 h-4 w-4 ${syncStatus === "syncing" ? "animate-spin" : ""}`}
+              />{" "}
+              Sync
             </Button>
             <VoiceMicButton onFinalTranscript={handleVoice} label="Voice" />
             <Button variant="outline" size="sm" onClick={() => setVoiceHelpOpen(true)}>
@@ -356,7 +443,9 @@ function CashierScreen() {
               </Button>
             </Link>
             <Link to="/sync">
-              <Button variant="outline" size="sm">Sync queue</Button>
+              <Button variant="outline" size="sm">
+                Sync queue
+              </Button>
             </Link>
 
             <Link to="/shift">
@@ -377,14 +466,21 @@ function CashierScreen() {
               </Button>
             )}
             <SignOutButton variant="outline" />
-
           </div>
         </header>
 
-        <div className={`border-b px-4 py-3 text-xs sm:px-6 ${online ? "border-blue-100 bg-blue-50 text-blue-950" : "border-amber-200 bg-amber-50 text-amber-950"}`}>
+        <div
+          className={`border-b px-4 py-3 text-xs sm:px-6 ${online ? "border-blue-100 bg-blue-50 text-blue-950" : "border-amber-200 bg-amber-50 text-amber-950"}`}
+        >
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-2">
-              {syncStatus === "syncing" ? <RefreshCw className="h-4 w-4 animate-spin" /> : online ? <CheckCircle2 className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />}
+              {syncStatus === "syncing" ? (
+                <RefreshCw className="h-4 w-4 animate-spin" />
+              ) : online ? (
+                <CheckCircle2 className="h-4 w-4" />
+              ) : (
+                <AlertTriangle className="h-4 w-4" />
+              )}
               <span className="font-medium">
                 {!online
                   ? "Offline mode active - sales are saved on this device."
@@ -396,7 +492,9 @@ function CashierScreen() {
               </span>
             </div>
             <span className="text-muted-foreground">
-              {lastSync ? `Last sync: ${new Date(lastSync).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : "Catalog is available after it loads once."}
+              {lastSync
+                ? `Last sync: ${new Date(lastSync).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`
+                : "Catalog is available after it loads once."}
             </span>
           </div>
         </div>
@@ -432,7 +530,9 @@ function CashierScreen() {
             <div className="flex h-full flex-col items-center justify-center text-center">
               <Search className="h-10 w-10 text-muted-foreground" />
               <p className="mt-3 text-sm font-medium">Search to find a product</p>
-              <p className="mt-1 text-xs text-muted-foreground">Products stay hidden until you type a name, variant or category.</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Products stay hidden until you type a name, variant or category.
+              </p>
             </div>
           ) : filtered.length === 0 ? (
             <div className="flex h-full flex-col items-center justify-center text-center">
@@ -452,15 +552,24 @@ function CashierScreen() {
                       {!hideImages && (
                         <div className="aspect-square overflow-hidden bg-accent">
                           {image ? (
-                            <img src={image} alt={v.product?.name} className="h-full w-full object-cover transition group-hover:scale-105" />
+                            <img
+                              src={image}
+                              alt={v.product?.name}
+                              className="h-full w-full object-cover transition group-hover:scale-105"
+                            />
                           ) : (
-                            <div className="grid h-full w-full place-items-center"><PackageIcon className="h-8 w-8 text-muted-foreground" /></div>
+                            <div className="grid h-full w-full place-items-center">
+                              <PackageIcon className="h-8 w-8 text-muted-foreground" />
+                            </div>
                           )}
                         </div>
                       )}
                       <div className="p-3">
                         <div className="truncate text-sm font-semibold">{v.product?.name}</div>
-                        <div className="mt-0.5 truncate text-xs text-muted-foreground">{v.variant_name}{v.size ? ` - ${v.size}` : ""}</div>
+                        <div className="mt-0.5 truncate text-xs text-muted-foreground">
+                          {v.variant_name}
+                          {v.size ? ` - ${v.size}` : ""}
+                        </div>
                         <div className="mt-2 flex items-center justify-between">
                           <span className="text-base font-bold">{formatCurrency(v.price)}</span>
                           <span className="text-xs text-muted-foreground">In stock</span>
@@ -473,13 +582,15 @@ function CashierScreen() {
             </div>
           )}
         </div>
-
       </div>
 
       <aside className="flex flex-col border-t border-border bg-card lg:border-l lg:border-t-0">
         <div className="border-b border-border px-4 py-3 sm:px-6 sm:py-4">
           <h2 className="text-lg font-bold">Current sale</h2>
-          <p className="text-xs text-muted-foreground">{cart.length} line{cart.length === 1 ? "" : "s"} · {cart.reduce((s, l) => s + l.qty, 0)} item{cart.reduce((s, l) => s + l.qty, 0) === 1 ? "" : "s"}</p>
+          <p className="text-xs text-muted-foreground">
+            {cart.length} line{cart.length === 1 ? "" : "s"} · {cart.reduce((s, l) => s + l.qty, 0)}{" "}
+            item{cart.reduce((s, l) => s + l.qty, 0) === 1 ? "" : "s"}
+          </p>
         </div>
         <div className="flex-1 overflow-auto px-4 py-3">
           {cart.length === 0 ? (
@@ -500,7 +611,9 @@ function CashierScreen() {
               </button>
               <div className="text-center">
                 <div className="text-sm font-bold tracking-[0.18em] uppercase">Receipt</div>
-                <div className="text-[11px] text-muted-foreground">{new Date().toLocaleString()}</div>
+                <div className="text-[11px] text-muted-foreground">
+                  {new Date().toLocaleString()}
+                </div>
               </div>
 
               <div className="my-3 border-t border-dashed border-border" />
@@ -508,17 +621,41 @@ function CashierScreen() {
                 {cart.map((l) => (
                   <li key={l.variant.id}>
                     <div className="flex items-baseline justify-between gap-2">
-                      <span className="min-w-0 truncate font-semibold">{l.variant.product?.name}</span>
-                      <span className="tabular-nums font-semibold">{formatCurrency(Number(l.variant.price) * l.qty)}</span>
+                      <span className="min-w-0 truncate font-semibold">
+                        {l.variant.product?.name}
+                      </span>
+                      <span className="tabular-nums font-semibold">
+                        {formatCurrency(Number(l.variant.price) * l.qty)}
+                      </span>
                     </div>
                     <div className="flex items-center justify-between gap-2 text-[11px] text-muted-foreground">
                       <span className="min-w-0 truncate">
-                        {l.variant.variant_name}{l.variant.size ? ` - ${l.variant.size}` : ""} · {l.qty} × {formatCurrency(l.variant.price)}
+                        {l.variant.variant_name}
+                        {l.variant.size ? ` - ${l.variant.size}` : ""} · {l.qty} ×{" "}
+                        {formatCurrency(l.variant.price)}
                       </span>
                       <span className="flex items-center gap-1">
-                        <button aria-label="Decrease" onClick={() => changeQty(l.variant.id, -1)} className="grid h-6 w-6 place-items-center rounded border border-border hover:bg-accent"><Minus className="h-3 w-3" /></button>
-                        <button aria-label="Increase" onClick={() => changeQty(l.variant.id, 1)} className="grid h-6 w-6 place-items-center rounded border border-border hover:bg-accent"><Plus className="h-3 w-3" /></button>
-                        <button aria-label="Remove" onClick={() => removeLine(l.variant.id)} className="grid h-6 w-6 place-items-center rounded border border-border hover:bg-destructive/10 hover:text-destructive"><Trash2 className="h-3 w-3" /></button>
+                        <button
+                          aria-label="Decrease"
+                          onClick={() => changeQty(l.variant.id, -1)}
+                          className="grid h-6 w-6 place-items-center rounded border border-border hover:bg-accent"
+                        >
+                          <Minus className="h-3 w-3" />
+                        </button>
+                        <button
+                          aria-label="Increase"
+                          onClick={() => changeQty(l.variant.id, 1)}
+                          className="grid h-6 w-6 place-items-center rounded border border-border hover:bg-accent"
+                        >
+                          <Plus className="h-3 w-3" />
+                        </button>
+                        <button
+                          aria-label="Remove"
+                          onClick={() => removeLine(l.variant.id)}
+                          className="grid h-6 w-6 place-items-center rounded border border-border hover:bg-destructive/10 hover:text-destructive"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </button>
                       </span>
                     </div>
                   </li>
@@ -537,17 +674,20 @@ function CashierScreen() {
           <div className="space-y-1">
             <label className="text-xs font-medium text-muted-foreground">Payment</label>
             <Select value={payment} onValueChange={(v) => setPayment(v as typeof payment)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="cash">Cash</SelectItem>
                 <SelectItem value="mobile">EcoCash / Mobile</SelectItem>
                 <SelectItem value="other">Other</SelectItem>
               </SelectContent>
-
             </Select>
           </div>
           <div className="space-y-1">
-            <label className="text-xs font-medium text-muted-foreground">Amount paid (optional)</label>
+            <label className="text-xs font-medium text-muted-foreground">
+              Amount paid (optional)
+            </label>
             <Input
               inputMode="decimal"
               placeholder={formatCurrency(subtotal)}
@@ -555,15 +695,22 @@ function CashierScreen() {
               onChange={(e) => setAmountPaid(e.target.value)}
             />
             {Number(amountPaid) > subtotal && (
-              <p className="text-xs font-medium text-emerald-700">Change: {formatCurrency(Number(amountPaid) - subtotal)}</p>
+              <p className="text-xs font-medium text-emerald-700">
+                Change: {formatCurrency(Number(amountPaid) - subtotal)}
+              </p>
             )}
           </div>
           <div className="flex items-center justify-between text-lg font-bold">
             <span>Total</span>
             <span>{formatCurrency(subtotal)}</span>
           </div>
-          <Button className="w-full" size="lg" disabled={cart.length === 0 || checkingOut} onClick={() => checkout.mutate()}>
-            {checkingOut ? "Saving..." : "Complete sale"}
+          <Button
+            className="w-full"
+            size="lg"
+            disabled={cart.length === 0 || checkingOut}
+            onClick={() => checkout.mutate()}
+          >
+            {checkingOut ? "Saving on device..." : online ? "Complete sale" : "Save sale offline"}
           </Button>
           <p className="text-center text-[11px] text-muted-foreground">
             Sales are saved on this device first, then uploaded automatically.
@@ -573,43 +720,76 @@ function CashierScreen() {
 
       <Dialog open={manualOpen} onOpenChange={setManualOpen}>
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-auto">
-          <DialogHeader><DialogTitle>Cashier User Manual</DialogTitle></DialogHeader>
+          <DialogHeader>
+            <DialogTitle>Cashier User Manual</DialogTitle>
+          </DialogHeader>
           <CashierManualContent />
         </DialogContent>
       </Dialog>
       <Dialog open={voiceHelpOpen} onOpenChange={setVoiceHelpOpen}>
         <DialogContent className="max-w-xl">
-          <DialogHeader><DialogTitle>Voice commands</DialogTitle></DialogHeader>
+          <DialogHeader>
+            <DialogTitle>Voice commands</DialogTitle>
+          </DialogHeader>
           <VoiceCommandHelp />
         </DialogContent>
       </Dialog>
-      <Dialog open={receipt !== null} onOpenChange={(o) => { if (!o) setReceipt(null); }}>
+      <Dialog
+        open={receipt !== null}
+        onOpenChange={(o) => {
+          if (!o) setReceipt(null);
+        }}
+      >
         <DialogContent className="max-w-md">
-          <DialogHeader><DialogTitle>Sale completed</DialogTitle></DialogHeader>
+          <DialogHeader>
+            <DialogTitle>Sale completed</DialogTitle>
+          </DialogHeader>
           {receipt && (
             <div className="space-y-3">
               <div className="rounded-lg border border-dashed border-border bg-accent/30 p-3 text-xs">
                 <pre className="whitespace-pre-wrap font-mono leading-relaxed">
-                  {receiptText(receipt.entry, { amountPaid: receipt.amountPaid, change: receipt.change })}
+                  {receiptText(receipt.entry, {
+                    amountPaid: receipt.amountPaid,
+                    change: receipt.change,
+                  })}
                 </pre>
               </div>
               <p className="text-xs text-muted-foreground">
-                Receipt {receiptNumber(receipt.entry)} is stored on this device. Reprint it any time from the transaction log.
+                Receipt {receiptNumber(receipt.entry)} is stored on this device. Reprint it any time
+                from the transaction log.
               </p>
               <div className="flex flex-wrap gap-2">
-                <Button className="flex-1" onClick={() => printReceipt(receipt.entry, { amountPaid: receipt.amountPaid, change: receipt.change })}>
+                <Button
+                  className="flex-1"
+                  onClick={() =>
+                    printReceipt(receipt.entry, {
+                      amountPaid: receipt.amountPaid,
+                      change: receipt.change,
+                    })
+                  }
+                >
                   Print receipt
                 </Button>
-                <Button variant="outline" className="flex-1" onClick={() => downloadReceipt(receipt.entry, { amountPaid: receipt.amountPaid, change: receipt.change })}>
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() =>
+                    downloadReceipt(receipt.entry, {
+                      amountPaid: receipt.amountPaid,
+                      change: receipt.change,
+                    })
+                  }
+                >
                   Download
                 </Button>
-                <Button variant="ghost" onClick={() => setReceipt(null)}>Next sale</Button>
+                <Button variant="ghost" onClick={() => setReceipt(null)}>
+                  Next sale
+                </Button>
               </div>
             </div>
           )}
         </DialogContent>
       </Dialog>
-
     </div>
   );
 }
@@ -620,17 +800,22 @@ export function VoiceCommandHelp() {
     ["add 3 Coke", "Adds a quantity in one command."],
     ["remove Coke", "Removes a matching item from the cart."],
     ["search sugar", "Filters the product grid."],
-    ["new" , "Clears the current cart for a new sale."],
+    ["new", "Clears the current cart for a new sale."],
     ["cash", "Sets payment to Cash."],
     ["ecocash", "Sets payment to EcoCash / Mobile."],
     ["checkout", "Completes or queues the sale, depending on connection."],
   ];
   return (
     <div className="space-y-3 text-sm">
-      <p className="text-muted-foreground">Tap Voice, speak one command clearly, then wait for the action to complete.</p>
+      <p className="text-muted-foreground">
+        Tap Voice, speak one command clearly, then wait for the action to complete.
+      </p>
       <div className="grid gap-2">
         {commands.map(([command, description]) => (
-          <div key={command} className="grid gap-2 rounded-lg border border-blue-100 bg-blue-50/40 p-3 sm:grid-cols-[140px_1fr]">
+          <div
+            key={command}
+            className="grid gap-2 rounded-lg border border-blue-100 bg-blue-50/40 p-3 sm:grid-cols-[140px_1fr]"
+          >
             <code className="font-semibold text-blue-800">{command}</code>
             <span className="text-muted-foreground">{description}</span>
           </div>
@@ -645,39 +830,68 @@ export function CashierManualContent() {
     <div className="space-y-4 text-sm leading-relaxed">
       <section>
         <h3 className="font-semibold text-base">1. Opening cashier mode</h3>
-        <p className="text-muted-foreground">From the welcome or auth page, tap Enter Cashier Mode. The till opens without a password for fast counter access. Named cashier accounts can still sign in when the manager wants staff-specific tracking.</p>
+        <p className="text-muted-foreground">
+          From the welcome or auth page, tap Enter Cashier Mode. The till opens without a password
+          for fast counter access. Named cashier accounts can still sign in when the manager wants
+          staff-specific tracking.
+        </p>
       </section>
       <section>
         <h3 className="font-semibold text-base">2. Finding a product</h3>
-        <p className="text-muted-foreground">Use the search bar at the top of the product grid. You can search by product name, variant, or category.</p>
+        <p className="text-muted-foreground">
+          Use the search bar at the top of the product grid. You can search by product name,
+          variant, or category.
+        </p>
       </section>
       <section>
         <h3 className="font-semibold text-base">3. Adding items to the cart</h3>
-        <p className="text-muted-foreground">Tap any product card. It appears in the current sale panel. Use plus and minus to change quantity. Tap the trash icon to remove a line.</p>
+        <p className="text-muted-foreground">
+          Tap any product card. It appears in the current sale panel. Use plus and minus to change
+          quantity. Tap the trash icon to remove a line.
+        </p>
       </section>
       <section>
         <h3 className="font-semibold text-base">4. Taking payment</h3>
-        <p className="text-muted-foreground">Choose the payment method, confirm the total with the customer, and tap Complete sale. Stock updates automatically.</p>
+        <p className="text-muted-foreground">
+          Choose the payment method, confirm the total with the customer, and tap Complete sale.
+          Stock updates automatically.
+        </p>
       </section>
       <section>
         <h3 className="font-semibold text-base">5. Voice commands</h3>
-        <p className="text-muted-foreground">Tap Voice and say commands such as add Coke, add 3 Coke, remove Coke, search sugar, new, cash, ecocash, or checkout. Use Voice help in the cashier top bar for the full list.</p>
+        <p className="text-muted-foreground">
+          Tap Voice and say commands such as add Coke, add 3 Coke, remove Coke, search sugar, new,
+          cash, ecocash, or checkout. Use Voice help in the cashier top bar for the full list.
+        </p>
       </section>
       <section>
         <h3 className="font-semibold text-base">6. Working offline and syncing</h3>
-        <p className="text-muted-foreground">If the connection drops, keep serving customers. Sales are stored securely on this device, a pending badge shows what is waiting, and sync runs automatically when the device comes back online. You can also press Sync while online.</p>
+        <p className="text-muted-foreground">
+          If the connection drops, keep serving customers. Sales are stored securely on this device,
+          a pending badge shows what is waiting, and sync runs automatically when the device comes
+          back online. You can also press Sync while online.
+        </p>
       </section>
       <section>
         <h3 className="font-semibold text-base">7. Stock warnings</h3>
-        <p className="text-muted-foreground">Out means the item cannot be sold. Low means only a few units remain - let the manager know.</p>
+        <p className="text-muted-foreground">
+          Out means the item cannot be sold. Low means only a few units remain - let the manager
+          know.
+        </p>
       </section>
       <section>
         <h3 className="font-semibold text-base">8. Installing on a device</h3>
-        <p className="text-muted-foreground">Tap Install in Chrome or Edge on the published site. The app appears with the other apps on the device and keeps the cashier dashboard available after it has loaded once.</p>
+        <p className="text-muted-foreground">
+          Tap Install in Chrome or Edge on the published site. The app appears with the other apps
+          on the device and keeps the cashier dashboard available after it has loaded once.
+        </p>
       </section>
       <section>
         <h3 className="font-semibold text-base">9. Signing out</h3>
-        <p className="text-muted-foreground">Tap Sign out at the end of your shift when using a named account. Shared cashier mode can be opened again from the auth page.</p>
+        <p className="text-muted-foreground">
+          Tap Sign out at the end of your shift when using a named account. Shared cashier mode can
+          be opened again from the auth page.
+        </p>
       </section>
     </div>
   );
