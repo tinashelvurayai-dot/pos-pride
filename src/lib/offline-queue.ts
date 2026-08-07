@@ -17,14 +17,19 @@ export type QueuedSaleItem = {
   subtotal: number;
 };
 
+export type QueueStatus = "pending" | "uploading" | "failed";
+
 export type QueuedSale = {
-  id: string; // client-generated, also used as the server idempotency key
+  id: string; // client-generated UUID, also used as the server idempotency key
   cashier_id: string;
   cashier_name?: string;
   total_amount: number;
   payment_type: "cash" | "mobile" | "card" | "other";
   items: QueuedSaleItem[];
   queued_at: string;
+  status?: QueueStatus;
+  attempts?: number;
+  last_error?: string;
 };
 
 
@@ -60,23 +65,30 @@ export function getQueue(): QueuedSale[] {
   return read();
 }
 
+function patch(id: string, changes: Partial<QueuedSale>) {
+  write(read().map((s) => (s.id === id ? { ...s, ...changes } : s)));
+}
+
 /** Restore the queue from IndexedDB when localStorage lost it (called once at boot). */
 export async function hydrateQueueFromIdb(): Promise<number> {
   const local = read();
   const durable = (await idbGet<QueuedSale[]>(IDB_KEYS.sales)) ?? [];
   const byId = new Map<string, QueuedSale>();
   for (const s of [...durable, ...local]) byId.set(s.id, s);
-  const merged = [...byId.values()].sort((a, b) => a.queued_at.localeCompare(b.queued_at));
-  if (merged.length !== local.length) write(merged);
-  else notify(merged);
+  const merged = [...byId.values()]
+    .map((s) => (s.status === "uploading" ? { ...s, status: "pending" as const } : s))
+    .sort((a, b) => a.queued_at.localeCompare(b.queued_at));
+  write(merged);
   return merged.length;
 }
 
-export function enqueueSale(sale: Omit<QueuedSale, "id" | "queued_at">): QueuedSale {
+export function enqueueSale(sale: Omit<QueuedSale, "id" | "queued_at"> & { id?: string }): QueuedSale {
   const entry: QueuedSale = {
     ...sale,
-    id: crypto.randomUUID(),
+    id: sale.id ?? crypto.randomUUID(),
     queued_at: new Date().toISOString(),
+    status: "pending",
+    attempts: 0,
   };
   const list = read();
   list.push(entry);
@@ -84,42 +96,32 @@ export function enqueueSale(sale: Omit<QueuedSale, "id" | "queued_at">): QueuedS
   return entry;
 }
 
-export async function flushQueue(): Promise<{ ok: number; failed: number }> {
-  const list = read();
-  if (list.length === 0) return { ok: 0, failed: 0 };
-
-  // Ensure we have an authenticated session so RLS (cashier_id = auth.uid()) passes.
-  let { data: sessionData } = await supabase.auth.getSession();
-  if (!sessionData.session) {
+async function ensureSession(): Promise<string | null> {
+  let { data } = await supabase.auth.getSession();
+  if (!data.session) {
     try {
       await supabase.auth.signInAnonymously({ options: { data: { full_name: "Guest Cashier" } } });
-      ({ data: sessionData } = await supabase.auth.getSession());
+      ({ data } = await supabase.auth.getSession());
     } catch {
-      return { ok: 0, failed: list.length };
+      return null;
     }
   }
-  const uid = sessionData.session?.user.id;
-  if (!uid) return { ok: 0, failed: list.length };
+  return data.session?.user.id ?? null;
+}
 
-  let ok = 0;
-  const remaining: QueuedSale[] = [];
-  for (const q of list) {
-    try {
-      // client_id is a unique idempotency key: a retried upload can never
-      // create a second copy of the same sale.
-      const { data: existing } = await supabase
-        .from("sales")
-        .select("id")
-        .eq("client_id", q.id)
-        .maybeSingle();
+/** Upload one queued sale. Returns true when the server confirms it. */
+export async function uploadSale(q: QueuedSale, uid: string): Promise<boolean> {
+  try {
+    patch(q.id, { status: "uploading" });
+    // client_id is a unique idempotency key: a retried upload can never
+    // create a second copy of the same sale.
+    const { data: existing } = await supabase
+      .from("sales")
+      .select("id")
+      .eq("client_id", q.id)
+      .maybeSingle();
 
-      if (existing?.id) {
-        markLogStatus(q.id, "synced");
-        clearSaleDelta(q.id);
-        ok++;
-        continue;
-      }
-
+    if (!existing?.id) {
       const { data: sale, error: saleErr } = await supabase
         .from("sales")
         .insert({
@@ -136,15 +138,50 @@ export async function flushQueue(): Promise<{ ok: number; failed: number }> {
       const items = q.items.map((i) => ({ ...i, sale_id: sale.id }));
       const { error: itemsErr } = await supabase.from("sale_items").insert(items);
       if (itemsErr) throw itemsErr;
-      markLogStatus(q.id, "synced");
-      clearSaleDelta(q.id);
-      ok++;
-    } catch {
-      remaining.push(q);
-
     }
+
+    // Confirmed on the server -> only now drop the local copies.
+    markLogStatus(q.id, "synced");
+    clearSaleDelta(q.id);
+    return true;
+  } catch (e) {
+    patch(q.id, {
+      status: "failed",
+      attempts: (q.attempts ?? 0) + 1,
+      last_error: e instanceof Error ? e.message : "Upload failed",
+    });
+    markLogStatus(q.id, "queued");
+    return false;
+  }
+}
+
+/** Retry a single failed/pending sale on demand. */
+export async function retrySale(id: string): Promise<boolean> {
+  const q = read().find((s) => s.id === id);
+  if (!q) return false;
+  const uid = await ensureSession();
+  if (!uid) return false;
+  const ok = await uploadSale(q, uid);
+  if (ok) write(read().filter((s) => s.id !== id));
+  return ok;
+}
+
+export async function flushQueue(): Promise<{ ok: number; failed: number }> {
+  const list = read();
+  if (list.length === 0) return { ok: 0, failed: 0 };
+
+  // Ensure we have an authenticated session so RLS (cashier_id = auth.uid()) passes.
+  const uid = await ensureSession();
+  if (!uid) return { ok: 0, failed: list.length };
+
+  let ok = 0;
+  const uploaded = new Set<string>();
+  for (const q of list) {
+    const success = await uploadSale(q, uid);
+    if (success) { uploaded.add(q.id); ok++; }
   }
 
+  const remaining = read().filter((s) => !uploaded.has(s.id));
   write(remaining);
   return { ok, failed: remaining.length };
 }
