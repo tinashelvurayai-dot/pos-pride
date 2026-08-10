@@ -99,3 +99,4 @@ export function downloadReceipt(entry: TxLogEntry, extras: ReceiptExtras = {}) {
   document.body.removeChild(a);
   setTimeout(() => URL.revokeObjectURL(url), 2000);
 }
+
