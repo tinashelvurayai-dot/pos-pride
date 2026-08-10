@@ -13,7 +13,9 @@ function isPreviewOrDev(): boolean {
     if (h === "beta.lovable.dev" || h.endsWith(".beta.lovable.dev")) return true;
     const params = new URLSearchParams(window.location.search);
     if (params.get("sw") === "off") return true;
-  } catch { /* noop */ }
+  } catch {
+    /* noop */
+  }
   return false;
 }
 
@@ -25,7 +27,9 @@ async function unregisterAppSW() {
       const url = r.active?.scriptURL || "";
       if (url.endsWith("/sw.js")) await r.unregister();
     }
-  } catch { /* noop */ }
+  } catch {
+    /* noop */
+  }
 }
 
 export function registerPWA(onUpdate?: (reload: () => void) => void) {
@@ -36,25 +40,40 @@ export function registerPWA(onUpdate?: (reload: () => void) => void) {
   }
   if (!("serviceWorker" in navigator)) return;
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("/sw.js").then((reg) => {
-      function watch(worker: ServiceWorker | null) {
-        if (!worker) return;
-        worker.addEventListener("statechange", () => {
-          if (worker.state === "installed" && navigator.serviceWorker.controller && onUpdate) {
-            onUpdate(() => {
-              worker.postMessage({ type: "SKIP_WAITING" });
-              window.location.reload();
-            });
-          }
-        });
-      }
-      if (reg.waiting && navigator.serviceWorker.controller && onUpdate) {
-        onUpdate(() => {
-          reg.waiting?.postMessage({ type: "SKIP_WAITING" });
-          window.location.reload();
-        });
-      }
-      reg.addEventListener("updatefound", () => watch(reg.installing));
-    }).catch(() => { /* noop */ });
+    navigator.serviceWorker
+      .register("/sw.js", { scope: "/" })
+      .then(async (reg) => {
+        try {
+          await navigator.storage?.persist?.();
+          await (
+            reg as ServiceWorkerRegistration & {
+              sync?: { register: (tag: string) => Promise<void> };
+            }
+          ).sync?.register("tillpoint-sales");
+        } catch {
+          // Storage and Background Sync are progressive enhancements.
+        }
+        function watch(worker: ServiceWorker | null) {
+          if (!worker) return;
+          worker.addEventListener("statechange", () => {
+            if (worker.state === "installed" && navigator.serviceWorker.controller && onUpdate) {
+              onUpdate(() => {
+                worker.postMessage({ type: "SKIP_WAITING" });
+                window.location.reload();
+              });
+            }
+          });
+        }
+        if (reg.waiting && navigator.serviceWorker.controller && onUpdate) {
+          onUpdate(() => {
+            reg.waiting?.postMessage({ type: "SKIP_WAITING" });
+            window.location.reload();
+          });
+        }
+        reg.addEventListener("updatefound", () => watch(reg.installing));
+      })
+      .catch(() => {
+        /* noop */
+      });
   });
 }
