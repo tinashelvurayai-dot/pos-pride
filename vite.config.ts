@@ -21,6 +21,7 @@ export default defineConfig({
         strategies: "injectManifest",
         srcDir: "src",
         filename: "sw.ts",
+        outDir: "dist/client",
         manifest: false,
         devOptions: { enabled: false },
         includeAssets: [
