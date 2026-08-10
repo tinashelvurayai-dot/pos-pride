@@ -62,6 +62,9 @@ function notify() {
 }
 
 function persist(list: QueuedSale[]) {
+  // Keep the most recent 500 sales; older entries are already expected to be
+  // synced before the device queue reaches this safety limit.
+  list = list.slice(-500);
   queueCache = list;
   // Keep only a small synchronous mirror. Serializing thousands of sales into
   // localStorage was blocking the cashier and leaving the button on “Saving”.
