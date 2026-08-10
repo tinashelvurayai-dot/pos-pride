@@ -322,7 +322,7 @@ function CashierScreen() {
   }
 
   const checkout = useMutation<{ entry: TxLogEntry }, Error, void>({
-    mutationFn: () => {
+    mutationFn: async () => {
       if (cart.length === 0) throw new Error("Cart is empty");
 
       const items = cart.map((l) => ({
