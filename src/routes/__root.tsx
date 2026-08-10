@@ -128,13 +128,14 @@ function RootComponent() {
     startSyncManager();
     const onOnline = () => {
       const pending = getQueue().length;
-      if (pending > 0) toast.info(`Back online — syncing ${pending} offline sales...`);
+      if (pending > 0) toast.info(`Back online - syncing ${pending} offline sales...`);
       void runSync().then(({ ok, failed }) => {
         if (ok > 0 && failed === 0) toast.success("All offline sales synced successfully!");
         else if (ok > 0 && failed > 0)
-          toast.warning(`Synced ${ok} sales. ${failed} failed — will retry.`);
+          toast.warning(`Synced ${ok} of ${ok + failed} sales. ${failed} failed - will retry.`);
       });
     };
+
     const onServiceWorkerMessage = (event: MessageEvent) => {
       if (event.data?.type === "RUN_SALES_SYNC") void runSync();
     };
