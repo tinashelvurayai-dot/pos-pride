@@ -1,12 +1,15 @@
 // Offline sales queue.
-// The in-memory cache is the checkout source of truth: local persistence is
-// mirrored without ever being allowed to delay a completed sale.
+// IndexedDB is the primary durable store (large quota); localStorage is only a
+// small synchronous mirror so the UI can read instantly on boot.
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { IDB_KEYS, idbGet, idbSet } from "@/lib/offline-db";
 import { markLogStatus } from "@/lib/transaction-log";
 import { clearSaleDelta } from "@/lib/local-stock";
 
 const QUEUE_KEY = "tillpoint.offline-sales.v1";
+const MAX_QUEUE = 500;
+export const MAX_ATTEMPTS = 3;
 
 export type QueuedSaleItem = {
   variant_id: string;
@@ -28,6 +31,7 @@ export type QueuedSale = {
   status?: QueueStatus;
   attempts?: number;
   last_error?: string;
+  next_attempt_at?: string;
 };
 
 type Listener = (count: number) => void;
@@ -56,26 +60,41 @@ function notify() {
     try {
       fn(queueCache.length);
     } catch {
-      /* noop */
+      /* a broken subscriber must never break the till */
     }
   }
 }
 
-function persist(list: QueuedSale[]) {
-  // Keep the most recent 500 sales; older entries are already expected to be
-  // synced before the device queue reaches this safety limit.
-  list = list.slice(-500);
+/**
+ * Persist the queue. Resolves to true when at least one store accepted the
+ * write - the caller surfaces a hard error to the cashier when both fail.
+ */
+function persist(list: QueuedSale[]): Promise<boolean> {
+  // IndexedDB holds the full queue (up to 500 sales); localStorage keeps a
+  // small tail so a cold boot still shows pending work immediately.
+  list = list.slice(-MAX_QUEUE);
   queueCache = list;
-  // Keep only a small synchronous mirror. Serializing thousands of sales into
-  // localStorage was blocking the cashier and leaving the button on “Saving”.
-  // IndexedDB remains the durable source for the complete queue.
+  notify();
+
+  let localOk = false;
+  let localError: unknown = null;
   try {
     window.localStorage.setItem(QUEUE_KEY, JSON.stringify(list.slice(-50)));
-  } catch {
-    /* best effort */
+    localOk = true;
+  } catch (e) {
+    localError = e;
   }
-  void idbSet(IDB_KEYS.sales, list);
-  notify();
+
+  return idbSet(IDB_KEYS.sales, list)
+    .then(() => true)
+    .catch((idbError: unknown) => {
+      if (!localOk) {
+        console.error("[offline-queue] both storage writes failed", { idbError, localError });
+        return false;
+      }
+      console.warn("[offline-queue] IndexedDB write failed, localStorage mirror kept", idbError);
+      return true;
+    });
 }
 
 export function getQueue(): QueuedSale[] {
@@ -83,7 +102,7 @@ export function getQueue(): QueuedSale[] {
 }
 
 function patch(id: string, changes: Partial<QueuedSale>) {
-  persist(queueCache.map((s) => (s.id === id ? { ...s, ...changes } : s)));
+  void persist(queueCache.map((s) => (s.id === id ? { ...s, ...changes } : s)));
 }
 
 /** Restore IndexedDB data without blocking the checkout path. */
@@ -96,7 +115,7 @@ export async function hydrateQueueFromIdb(): Promise<number> {
   const merged = [...byId.values()]
     .map((s) => (s.status === "uploading" ? { ...s, status: "pending" as const } : s))
     .sort((a, b) => a.queued_at.localeCompare(b.queued_at));
-  persist(merged);
+  void persist(merged);
   return merged.length;
 }
 
@@ -105,14 +124,32 @@ export function enqueueSale(
 ): QueuedSale {
   const entry: QueuedSale = {
     ...sale,
+    // Unique id + timestamp: the server dedupes on this id.
     id: sale.id ?? crypto.randomUUID?.() ?? `${Date.now()}-${Math.random()}`,
     queued_at: new Date().toISOString(),
     status: "pending",
     attempts: 0,
   };
-  persist([...queueCache, entry]);
+  void persist([...queueCache, entry]).then((ok) => {
+    if (ok) {
+      if (typeof navigator !== "undefined" && !navigator.onLine)
+        toast.success("Sale saved offline - will sync when back online");
+    } else {
+      toast.error("ERROR: Sale could not be saved. Please write it down manually.", {
+        duration: 60_000,
+      });
+    }
+  });
   return entry;
 }
+
+/** A sale is eligible for an automatic retry until it burns its attempts. */
+export function isRetryable(s: QueuedSale): boolean {
+  if ((s.attempts ?? 0) >= MAX_ATTEMPTS) return false;
+  if (s.next_attempt_at && Date.now() < Date.parse(s.next_attempt_at)) return false;
+  return true;
+}
+
 
 async function ensureSession(): Promise<string | null> {
   let { data } = await supabase.auth.getSession();
