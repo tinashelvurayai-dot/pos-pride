@@ -197,10 +197,14 @@ export async function uploadSale(q: QueuedSale, uid: string): Promise<boolean> {
     clearSaleDelta(q.id);
     return true;
   } catch (e) {
+    const attempts = (q.attempts ?? 0) + 1;
+    // Exponential backoff: 5s, 20s, 80s before the sale is parked for manual retry.
+    const delay = 5_000 * 4 ** (attempts - 1);
     patch(q.id, {
       status: "failed",
-      attempts: (q.attempts ?? 0) + 1,
+      attempts,
       last_error: e instanceof Error ? e.message : "Upload failed",
+      next_attempt_at: new Date(Date.now() + delay).toISOString(),
     });
     markLogStatus(q.id, "queued");
     return false;
@@ -212,25 +216,29 @@ export async function retrySale(id: string): Promise<boolean> {
   if (!q) return false;
   const uid = await ensureSession();
   if (!uid) return false;
-  const ok = await uploadSale(q, uid);
-  if (ok) persist(queueCache.filter((s) => s.id !== id));
+  // Manual retry always runs: clear the backoff window and attempt budget.
+  patch(id, { attempts: 0, next_attempt_at: undefined });
+  const ok = await uploadSale({ ...q, attempts: 0 }, uid);
+  if (ok) void persist(queueCache.filter((s) => s.id !== id));
   return ok;
 }
 
-export async function flushQueue(): Promise<{ ok: number; failed: number }> {
+export async function flushQueue(): Promise<{ ok: number; failed: number; total: number }> {
   const list = queueCache.slice();
-  if (list.length === 0) return { ok: 0, failed: 0 };
+  if (list.length === 0) return { ok: 0, failed: 0, total: 0 };
   const uid = await ensureSession();
-  if (!uid) return { ok: 0, failed: list.length };
+  if (!uid) return { ok: 0, failed: list.length, total: list.length };
 
+  const due = list.filter(isRetryable);
   let ok = 0;
   const uploaded = new Set<string>();
-  for (const q of list) {
+  for (const q of due) {
     if (await uploadSale(q, uid)) {
       uploaded.add(q.id);
       ok++;
     }
   }
-  persist(queueCache.filter((s) => !uploaded.has(s.id)));
-  return { ok, failed: queueCache.length };
+  void persist(queueCache.filter((s) => !uploaded.has(s.id)));
+  return { ok, failed: queueCache.length, total: list.length };
 }
+
