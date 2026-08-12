@@ -24,9 +24,17 @@ export const Route = createFileRoute("/_authenticated/transactions")({
   head: () => ({
     meta: [
       { title: "Transaction Log - TillPoint" },
-      { name: "description", content: "Every sale recorded on this till, including offline queued sales waiting to sync." },
+      {
+        name: "description",
+        content:
+          "Every sale recorded on this till, including offline queued sales waiting to sync.",
+      },
       { property: "og:title", content: "Transaction Log - TillPoint" },
-      { property: "og:description", content: "Every sale recorded on this till, including offline queued sales waiting to sync." },
+      {
+        property: "og:description",
+        content:
+          "Every sale recorded on this till, including offline queued sales waiting to sync.",
+      },
     ],
   }),
   component: TransactionsPage,
@@ -35,6 +43,8 @@ export const Route = createFileRoute("/_authenticated/transactions")({
 function TransactionsPage() {
   const [entries, setEntries] = useState<TxLogEntry[]>([]);
   const [query, setQuery] = useState("");
+  const [paymentFilter, setPaymentFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
   const [isManager, setIsManager] = useState(false);
 
   useEffect(() => {
@@ -45,16 +55,17 @@ function TransactionsPage() {
     return off;
   }, []);
 
-
-
   const filtered = useMemo(() => {
     const q = query.toLowerCase().trim();
     if (!q) return entries;
-    return entries.filter((e) =>
-      e.cashier_name.toLowerCase().includes(q) ||
-      e.payment_type.toLowerCase().includes(q) ||
-      e.status.includes(q) ||
-      e.items.some((i) => `${i.name} ${i.variant}`.toLowerCase().includes(q)),
+    return entries.filter(
+      (e) =>
+        (paymentFilter === "all" || e.payment_type === paymentFilter) &&
+        (statusFilter === "all" || e.status === statusFilter) &&
+        (e.cashier_name.toLowerCase().includes(q) ||
+          e.payment_type.toLowerCase().includes(q) ||
+          e.status.includes(q) ||
+          e.items.some((i) => `${i.name} ${i.variant}`.toLowerCase().includes(q))),
     );
   }, [entries, query]);
 
@@ -95,46 +106,104 @@ function TransactionsPage() {
         <div className="flex items-center gap-3">
           <BrandLogo />
           <div className="hidden border-l border-border pl-3 sm:block">
-            <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Transaction log</div>
-            <div className="text-sm font-semibold">{isManager ? "Manager view" : "Cashier view"}</div>
+            <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              Transaction log
+            </div>
+            <div className="text-sm font-semibold">
+              {isManager ? "Manager view" : "Cashier view"}
+            </div>
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <SyncIndicator />
-          <Button variant="outline" size="sm" onClick={() => { void runSync(); }}>Sync now</Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              void runSync();
+            }}
+          >
+            Sync now
+          </Button>
           <Link to={isManager ? "/manager" : "/cashier"}>
-            <Button variant="outline" size="sm"><ArrowLeft className="mr-2 h-4 w-4" /> Back</Button>
+            <Button variant="outline" size="sm">
+              <ArrowLeft className="mr-2 h-4 w-4" /> Back
+            </Button>
           </Link>
         </div>
       </header>
 
       <div className="p-4 sm:p-6 md:p-10">
         <div className="mb-6 grid gap-4 sm:grid-cols-3">
-          <Card className="p-5"><div className="text-sm text-muted-foreground">Transactions</div><div className="mt-1 text-2xl font-bold">{filtered.length}</div></Card>
-          <Card className="p-5"><div className="text-sm text-muted-foreground">Value</div><div className="mt-1 text-2xl font-bold">{formatCurrency(total)}</div></Card>
-          <Card className="p-5"><div className="text-sm text-muted-foreground">Waiting to sync</div><div className="mt-1 text-2xl font-bold">{queued}</div></Card>
+          <Card className="p-5">
+            <div className="text-sm text-muted-foreground">Transactions</div>
+            <div className="mt-1 text-2xl font-bold">{filtered.length}</div>
+          </Card>
+          <Card className="p-5">
+            <div className="text-sm text-muted-foreground">Value</div>
+            <div className="mt-1 text-2xl font-bold">{formatCurrency(total)}</div>
+          </Card>
+          <Card className="p-5">
+            <div className="text-sm text-muted-foreground">Waiting to sync</div>
+            <div className="mt-1 text-2xl font-bold">{queued}</div>
+          </Card>
         </div>
 
         <div className="mb-4 flex flex-wrap items-center gap-2">
           <div className="relative max-w-sm flex-1">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search item, cashier, payment..." className="pl-9" />
+            <Input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search item, cashier, payment..."
+              className="pl-9"
+            />
           </div>
+          <select
+            value={paymentFilter}
+            onChange={(e) => setPaymentFilter(e.target.value)}
+            className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+          >
+            <option value="all">All payments</option>
+            <option value="cash">Cash</option>
+            <option value="card">Card</option>
+            <option value="mobile">Mobile</option>
+          </select>
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+          >
+            <option value="all">All statuses</option>
+            <option value="synced">Synced</option>
+            <option value="queued">Saved offline</option>
+            <option value="failed">Failed</option>
+          </select>
           {isManager && (
             <>
-              <Button variant="outline" size="sm" onClick={copyAll}><Copy className="mr-2 h-4 w-4" /> Copy</Button>
-              <Button variant="outline" size="sm" onClick={downloadCsv}><Download className="mr-2 h-4 w-4" /> Download CSV</Button>
-              <Button variant="destructive" size="sm" onClick={doClear}><Trash2 className="mr-2 h-4 w-4" /> Clear</Button>
+              <Button variant="outline" size="sm" onClick={copyAll}>
+                <Copy className="mr-2 h-4 w-4" /> Copy
+              </Button>
+              <Button variant="outline" size="sm" onClick={downloadCsv}>
+                <Download className="mr-2 h-4 w-4" /> Download CSV
+              </Button>
+              <Button variant="destructive" size="sm" onClick={doClear}>
+                <Trash2 className="mr-2 h-4 w-4" /> Clear
+              </Button>
             </>
           )}
         </div>
 
         {!isManager && (
-          <p className="mb-4 text-xs text-muted-foreground">Only the manager can copy or clear these records.</p>
+          <p className="mb-4 text-xs text-muted-foreground">
+            Only the manager can copy or clear these records.
+          </p>
         )}
 
         {filtered.length === 0 ? (
-          <Card className="p-10 text-center text-sm text-muted-foreground">No transactions recorded on this device yet.</Card>
+          <Card className="p-10 text-center text-sm text-muted-foreground">
+            No transactions recorded on this device yet.
+          </Card>
         ) : (
           <div className="space-y-3">
             {filtered.map((e) => (
@@ -142,11 +211,19 @@ function TransactionsPage() {
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div>
                     <div className="text-sm font-semibold">{formatDate(e.created_at)}</div>
-                    <div className="text-xs text-muted-foreground">{e.cashier_name} · {e.payment_type}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {e.cashier_name} · {e.payment_type}
+                    </div>
                   </div>
                   <div className="flex items-center gap-2">
                     <Badge
-                      variant={e.status === "synced" ? "secondary" : e.status === "queued" ? "outline" : "destructive"}
+                      variant={
+                        e.status === "synced"
+                          ? "secondary"
+                          : e.status === "queued"
+                            ? "outline"
+                            : "destructive"
+                      }
                       className="capitalize"
                     >
                       {e.status === "queued" ? "Saved offline" : e.status}
@@ -173,7 +250,6 @@ function TransactionsPage() {
                     <Download className="mr-2 h-4 w-4" /> Save receipt
                   </Button>
                 </div>
-
               </Card>
             ))}
           </div>
