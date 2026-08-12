@@ -21,16 +21,22 @@ import {
   AlertTriangle,
   RefreshCw,
   Lock as LockIcon,
+  HardDrive,
+  Settings,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { isManagerMode } from "@/lib/session-mode";
-
 
 export const Route = createFileRoute("/_authenticated/manager")({
   component: ManagerLayout,
 });
 
-const navItems: Array<{ to: string; label: string; icon: typeof LayoutDashboard; exact?: boolean }> = [
+const navItems: Array<{
+  to: string;
+  label: string;
+  icon: typeof LayoutDashboard;
+  exact?: boolean;
+}> = [
   { to: "/manager", label: "Dashboard", icon: LayoutDashboard, exact: true },
   { to: "/manager/products", label: "Products", icon: Package },
   { to: "/manager/stock", label: "Stock", icon: Boxes },
@@ -45,26 +51,32 @@ const navItems: Array<{ to: string; label: string; icon: typeof LayoutDashboard;
   { to: "/shift", label: "Shift Close (Z)", icon: LockIcon },
   { to: "/orders", label: "Orders", icon: ClipboardList },
 
+  { to: "/manager/storage", label: "Storage & Exports", icon: HardDrive },
+  { to: "/manager/settings", label: "Settings", icon: Settings },
   { to: "/manager/manuals", label: "Manuals", icon: BookOpen },
-
 ];
-
 
 function ManagerLayout() {
   const { role, profile, loading } = useAuth();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  if (loading) return <div className="flex min-h-screen items-center justify-center text-muted-foreground">Loading...</div>;
+  if (loading)
+    return (
+      <div className="flex min-h-screen items-center justify-center text-muted-foreground">
+        Loading...
+      </div>
+    );
   const unlocked = isManagerMode();
   if (role !== "manager" && !unlocked) return <Navigate to="/cashier" />;
-
 
   const SidebarInner = (
     <>
       <div className="px-6 py-5">
         <BrandLogo />
-        <div className="mt-1 pl-[46px] text-[10px] font-medium uppercase tracking-[0.16em] text-slate-500">Manager console</div>
+        <div className="mt-1 pl-[46px] text-[10px] font-medium uppercase tracking-[0.16em] text-slate-500">
+          Manager console
+        </div>
       </div>
       <nav className="flex-1 space-y-1 px-3 py-4">
         {navItems.map((item) => {
@@ -118,7 +130,9 @@ function ManagerLayout() {
           <div className="absolute inset-0 bg-black/40" onClick={() => setMobileOpen(false)} />
           <aside className="absolute left-0 top-0 flex h-full w-72 flex-col bg-gradient-to-b from-slate-100 to-blue-50 shadow-xl">
             <div className="flex justify-end p-2">
-              <Button variant="ghost" size="icon" onClick={() => setMobileOpen(false)}><X className="h-5 w-5" /></Button>
+              <Button variant="ghost" size="icon" onClick={() => setMobileOpen(false)}>
+                <X className="h-5 w-5" />
+              </Button>
             </div>
             {SidebarInner}
           </aside>

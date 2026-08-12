@@ -8,8 +8,20 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { Truck, Plus, Trash2, PackageCheck, Zap } from "lucide-react";
 import { useMemo, useState } from "react";
@@ -25,9 +37,24 @@ function SuppliersPage() {
   const qc = useQueryClient();
   const { session } = useAuth();
   const [supplierOpen, setSupplierOpen] = useState(false);
-  const [supForm, setSupForm] = useState({ name: "", contact_name: "", phone: "", email: "", address: "", notes: "" });
+  const [supForm, setSupForm] = useState({
+    name: "",
+    contact_name: "",
+    phone: "",
+    email: "",
+    address: "",
+    notes: "",
+  });
   const [poOpen, setPoOpen] = useState(false);
-  const [poForm, setPoForm] = useState<{ supplier_id: string; notes: string; auto_reorder: boolean; items: POItem[] }>({
+  const [autoReorderEnabled, setAutoReorderEnabled] = useState(
+    () => localStorage.getItem("tillpoint.auto-reorder.v1") === "true",
+  );
+  const [poForm, setPoForm] = useState<{
+    supplier_id: string;
+    notes: string;
+    auto_reorder: boolean;
+    items: POItem[];
+  }>({
     supplier_id: "",
     notes: "",
     auto_reorder: false,
@@ -46,7 +73,11 @@ function SuppliersPage() {
   const pos = useQuery({
     queryKey: ["purchase-orders"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("purchase_orders").select("*, supplier:suppliers(name)").order("order_date", { ascending: false }).limit(40);
+      const { data, error } = await supabase
+        .from("purchase_orders")
+        .select("*, supplier:suppliers(name)")
+        .order("order_date", { ascending: false })
+        .limit(40);
       if (error) throw error;
       return data ?? [];
     },
@@ -57,7 +88,9 @@ function SuppliersPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("stock")
-        .select("quantity, low_stock_alert_level, variant:product_variants(id, variant_name, price, product:products(name))");
+        .select(
+          "quantity, low_stock_alert_level, variant:product_variants(id, variant_name, price, product:products(name))",
+        );
       if (error) throw error;
       return (data ?? []).filter((s) => s.quantity <= s.low_stock_alert_level);
     },
@@ -101,7 +134,12 @@ function SuppliersPage() {
     onSuccess: () => {
       toast.success("Purchase order created");
       setPoOpen(false);
-      setPoForm({ supplier_id: "", notes: "", auto_reorder: false, items: [{ name: "", quantity: 1, unit_cost: 0 }] });
+      setPoForm({
+        supplier_id: "",
+        notes: "",
+        auto_reorder: false,
+        items: [{ name: "", quantity: 1, unit_cost: 0 }],
+      });
       qc.invalidateQueries({ queryKey: ["purchase-orders"] });
     },
     onError: (e: Error) => toast.error(e.message),
@@ -129,7 +167,12 @@ function SuppliersPage() {
       toast.info("No low-stock items to auto-reorder");
       return;
     }
-    setPoForm({ supplier_id: suppliers.data[0].id, notes: "Auto-generated from low-stock alerts", auto_reorder: true, items });
+    setPoForm({
+      supplier_id: suppliers.data[0].id,
+      notes: "Auto-generated from low-stock alerts",
+      auto_reorder: true,
+      items,
+    });
     setPoOpen(true);
   }
 
@@ -138,9 +181,25 @@ function SuppliersPage() {
       <header className="mb-8 flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Suppliers & Purchase Orders</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Manage suppliers, issue POs, and auto-reorder items running low.</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Manage suppliers, issue POs, and auto-reorder items running low.
+          </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <Button
+            variant={autoReorderEnabled ? "default" : "outline"}
+            onClick={() => {
+              const next = !autoReorderEnabled;
+              setAutoReorderEnabled(next);
+              localStorage.setItem("tillpoint.auto-reorder.v1", String(next));
+              toast.success(
+                next ? "Auto-reorder enabled for this device." : "Auto-reorder disabled.",
+              );
+            }}
+          >
+            <Zap className="mr-2 h-4 w-4" />{" "}
+            {autoReorderEnabled ? "Auto-reorder on" : "Enable auto-reorder"}
+          </Button>
           <Button variant="outline" onClick={autoReorderFromLowStock}>
             <Zap className="mr-2 h-4 w-4" /> Auto-reorder low stock
           </Button>
@@ -155,33 +214,48 @@ function SuppliersPage() {
 
       <section className="grid gap-6 lg:grid-cols-[380px_1fr]">
         <Card className="border-blue-100 p-5">
-          <h2 className="mb-4 flex items-center gap-2 font-semibold"><Truck className="h-4 w-4 text-blue-600" /> Suppliers</h2>
+          <h2 className="mb-4 flex items-center gap-2 font-semibold">
+            <Truck className="h-4 w-4 text-blue-600" /> Suppliers
+          </h2>
           <ul className="divide-y divide-blue-100">
             {(suppliers.data ?? []).map((s) => (
               <li key={s.id} className="py-3">
                 <div className="font-medium">{s.name}</div>
-                <div className="text-xs text-muted-foreground">{s.contact_name} {s.phone && `· ${s.phone}`}</div>
+                <div className="text-xs text-muted-foreground">
+                  {s.contact_name} {s.phone && `· ${s.phone}`}
+                </div>
                 {s.email && <div className="text-xs text-muted-foreground">{s.email}</div>}
               </li>
             ))}
-            {suppliers.data?.length === 0 && <li className="py-6 text-center text-sm text-muted-foreground">No suppliers yet.</li>}
+            {suppliers.data?.length === 0 && (
+              <li className="py-6 text-center text-sm text-muted-foreground">No suppliers yet.</li>
+            )}
           </ul>
         </Card>
 
         <Card className="border-blue-100 p-5">
-          <h2 className="mb-4 flex items-center gap-2 font-semibold"><PackageCheck className="h-4 w-4 text-blue-600" /> Purchase orders</h2>
+          <h2 className="mb-4 flex items-center gap-2 font-semibold">
+            <PackageCheck className="h-4 w-4 text-blue-600" /> Purchase orders
+          </h2>
           <ul className="divide-y divide-blue-100">
             {(pos.data ?? []).map((p: any) => (
               <li key={p.id} className="py-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
                     <div className="font-medium">{p.supplier?.name ?? "Supplier"}</div>
-                    <div className="text-xs text-muted-foreground">{formatDate(p.order_date)} · {(p.items as POItem[])?.length ?? 0} items</div>
+                    <div className="text-xs text-muted-foreground">
+                      {formatDate(p.order_date)} · {(p.items as POItem[])?.length ?? 0} items
+                    </div>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="font-semibold">{formatCurrency(p.total)}</span>
-                    <Select value={p.status} onValueChange={(v) => updateStatus.mutate({ id: p.id, status: v })}>
-                      <SelectTrigger className="h-8 w-32"><SelectValue /></SelectTrigger>
+                    <Select
+                      value={p.status}
+                      onValueChange={(v) => updateStatus.mutate({ id: p.id, status: v })}
+                    >
+                      <SelectTrigger className="h-8 w-32">
+                        <SelectValue />
+                      </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="pending">Pending</SelectItem>
                         <SelectItem value="ordered">Ordered</SelectItem>
@@ -189,18 +263,28 @@ function SuppliersPage() {
                         <SelectItem value="cancelled">Cancelled</SelectItem>
                       </SelectContent>
                     </Select>
-                    {p.auto_reorder && <Badge variant="outline" className="border-blue-300 text-blue-700">Auto</Badge>}
+                    {p.auto_reorder && (
+                      <Badge variant="outline" className="border-blue-300 text-blue-700">
+                        Auto
+                      </Badge>
+                    )}
                   </div>
                 </div>
                 <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
                   {(p.items as POItem[])?.slice(0, 4).map((it, i) => (
-                    <li key={i}>{it.quantity}x {it.name} @ {formatCurrency(it.unit_cost)}</li>
+                    <li key={i}>
+                      {it.quantity}x {it.name} @ {formatCurrency(it.unit_cost)}
+                    </li>
                   ))}
                   {(p.items as POItem[])?.length > 4 && <li>+ {p.items.length - 4} more</li>}
                 </ul>
               </li>
             ))}
-            {pos.data?.length === 0 && <li className="py-6 text-center text-sm text-muted-foreground">No purchase orders yet.</li>}
+            {pos.data?.length === 0 && (
+              <li className="py-6 text-center text-sm text-muted-foreground">
+                No purchase orders yet.
+              </li>
+            )}
           </ul>
         </Card>
       </section>
@@ -208,20 +292,62 @@ function SuppliersPage() {
       {/* Add supplier dialog */}
       <Dialog open={supplierOpen} onOpenChange={setSupplierOpen}>
         <DialogContent>
-          <DialogHeader><DialogTitle>Add supplier</DialogTitle></DialogHeader>
+          <DialogHeader>
+            <DialogTitle>Add supplier</DialogTitle>
+          </DialogHeader>
           <div className="space-y-3">
-            <div><Label>Name *</Label><Input value={supForm.name} onChange={(e) => setSupForm({ ...supForm, name: e.target.value })} /></div>
-            <div><Label>Contact person</Label><Input value={supForm.contact_name} onChange={(e) => setSupForm({ ...supForm, contact_name: e.target.value })} /></div>
-            <div className="grid grid-cols-2 gap-3">
-              <div><Label>Phone</Label><Input value={supForm.phone} onChange={(e) => setSupForm({ ...supForm, phone: e.target.value })} /></div>
-              <div><Label>Email</Label><Input value={supForm.email} onChange={(e) => setSupForm({ ...supForm, email: e.target.value })} /></div>
+            <div>
+              <Label>Name *</Label>
+              <Input
+                value={supForm.name}
+                onChange={(e) => setSupForm({ ...supForm, name: e.target.value })}
+              />
             </div>
-            <div><Label>Address</Label><Input value={supForm.address} onChange={(e) => setSupForm({ ...supForm, address: e.target.value })} /></div>
-            <div><Label>Notes</Label><Textarea value={supForm.notes} onChange={(e) => setSupForm({ ...supForm, notes: e.target.value })} /></div>
+            <div>
+              <Label>Contact person</Label>
+              <Input
+                value={supForm.contact_name}
+                onChange={(e) => setSupForm({ ...supForm, contact_name: e.target.value })}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Phone</Label>
+                <Input
+                  value={supForm.phone}
+                  onChange={(e) => setSupForm({ ...supForm, phone: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label>Email</Label>
+                <Input
+                  value={supForm.email}
+                  onChange={(e) => setSupForm({ ...supForm, email: e.target.value })}
+                />
+              </div>
+            </div>
+            <div>
+              <Label>Address</Label>
+              <Input
+                value={supForm.address}
+                onChange={(e) => setSupForm({ ...supForm, address: e.target.value })}
+              />
+            </div>
+            <div>
+              <Label>Notes</Label>
+              <Textarea
+                value={supForm.notes}
+                onChange={(e) => setSupForm({ ...supForm, notes: e.target.value })}
+              />
+            </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setSupplierOpen(false)}>Cancel</Button>
-            <Button onClick={() => addSupplier.mutate()} disabled={addSupplier.isPending}>Save</Button>
+            <Button variant="outline" onClick={() => setSupplierOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={() => addSupplier.mutate()} disabled={addSupplier.isPending}>
+              Save
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -229,14 +355,25 @@ function SuppliersPage() {
       {/* PO dialog */}
       <Dialog open={poOpen} onOpenChange={setPoOpen}>
         <DialogContent className="max-w-2xl">
-          <DialogHeader><DialogTitle>New purchase order</DialogTitle></DialogHeader>
+          <DialogHeader>
+            <DialogTitle>New purchase order</DialogTitle>
+          </DialogHeader>
           <div className="space-y-3">
             <div>
               <Label>Supplier</Label>
-              <Select value={poForm.supplier_id} onValueChange={(v) => setPoForm({ ...poForm, supplier_id: v })}>
-                <SelectTrigger><SelectValue placeholder="Choose supplier" /></SelectTrigger>
+              <Select
+                value={poForm.supplier_id}
+                onValueChange={(v) => setPoForm({ ...poForm, supplier_id: v })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Choose supplier" />
+                </SelectTrigger>
                 <SelectContent>
-                  {(suppliers.data ?? []).map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                  {(suppliers.data ?? []).map((s) => (
+                    <SelectItem key={s.id} value={s.id}>
+                      {s.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -245,37 +382,89 @@ function SuppliersPage() {
               <div className="space-y-2">
                 {poForm.items.map((it, i) => (
                   <div key={i} className="grid grid-cols-[1fr_80px_100px_36px] items-center gap-2">
-                    <Input placeholder="Item name" value={it.name} onChange={(e) => {
-                      const items = [...poForm.items]; items[i] = { ...it, name: e.target.value }; setPoForm({ ...poForm, items });
-                    }} />
-                    <Input type="number" placeholder="Qty" value={it.quantity} onChange={(e) => {
-                      const items = [...poForm.items]; items[i] = { ...it, quantity: Number(e.target.value) }; setPoForm({ ...poForm, items });
-                    }} />
-                    <Input type="number" step="0.01" placeholder="Unit cost" value={it.unit_cost} onChange={(e) => {
-                      const items = [...poForm.items]; items[i] = { ...it, unit_cost: Number(e.target.value) }; setPoForm({ ...poForm, items });
-                    }} />
-                    <Button size="icon" variant="ghost" onClick={() => setPoForm({ ...poForm, items: poForm.items.filter((_, x) => x !== i) })}>
+                    <Input
+                      placeholder="Item name"
+                      value={it.name}
+                      onChange={(e) => {
+                        const items = [...poForm.items];
+                        items[i] = { ...it, name: e.target.value };
+                        setPoForm({ ...poForm, items });
+                      }}
+                    />
+                    <Input
+                      type="number"
+                      placeholder="Qty"
+                      value={it.quantity}
+                      onChange={(e) => {
+                        const items = [...poForm.items];
+                        items[i] = { ...it, quantity: Number(e.target.value) };
+                        setPoForm({ ...poForm, items });
+                      }}
+                    />
+                    <Input
+                      type="number"
+                      step="0.01"
+                      placeholder="Unit cost"
+                      value={it.unit_cost}
+                      onChange={(e) => {
+                        const items = [...poForm.items];
+                        items[i] = { ...it, unit_cost: Number(e.target.value) };
+                        setPoForm({ ...poForm, items });
+                      }}
+                    />
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      onClick={() =>
+                        setPoForm({ ...poForm, items: poForm.items.filter((_, x) => x !== i) })
+                      }
+                    >
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
                 ))}
-                <Button size="sm" variant="outline" onClick={() => setPoForm({ ...poForm, items: [...poForm.items, { name: "", quantity: 1, unit_cost: 0 }] })}>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() =>
+                    setPoForm({
+                      ...poForm,
+                      items: [...poForm.items, { name: "", quantity: 1, unit_cost: 0 }],
+                    })
+                  }
+                >
                   <Plus className="mr-1 h-3 w-3" /> Add row
                 </Button>
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <input id="auto" type="checkbox" checked={poForm.auto_reorder} onChange={(e) => setPoForm({ ...poForm, auto_reorder: e.target.checked })} className="h-4 w-4" />
+              <input
+                id="auto"
+                type="checkbox"
+                checked={poForm.auto_reorder}
+                onChange={(e) => setPoForm({ ...poForm, auto_reorder: e.target.checked })}
+                className="h-4 w-4"
+              />
               <Label htmlFor="auto">Mark as auto-reorder (recurring)</Label>
             </div>
-            <div><Label>Notes</Label><Textarea value={poForm.notes} onChange={(e) => setPoForm({ ...poForm, notes: e.target.value })} /></div>
+            <div>
+              <Label>Notes</Label>
+              <Textarea
+                value={poForm.notes}
+                onChange={(e) => setPoForm({ ...poForm, notes: e.target.value })}
+              />
+            </div>
             <div className="rounded-md border border-blue-200 bg-blue-50 p-3 text-sm font-semibold text-blue-900">
               Total: {formatCurrency(poTotal)}
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setPoOpen(false)}>Cancel</Button>
-            <Button onClick={() => addPO.mutate()} disabled={addPO.isPending}>Create PO</Button>
+            <Button variant="outline" onClick={() => setPoOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={() => addPO.mutate()} disabled={addPO.isPending}>
+              Create PO
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

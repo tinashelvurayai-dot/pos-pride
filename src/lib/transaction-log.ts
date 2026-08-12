@@ -106,6 +106,40 @@ export function clearLog() {
   persist([]);
 }
 
+export function logToRows(list: TxLogEntry[]): string[][] {
+  const rows: string[][] = [
+    [
+      "When",
+      "Cashier",
+      "Payment",
+      "Status",
+      "Item",
+      "Variant",
+      "Qty",
+      "Unit price",
+      "Line total",
+      "Sale total",
+    ],
+  ];
+  for (const e of list) {
+    for (const i of e.items) {
+      rows.push([
+        new Date(e.created_at).toLocaleString(),
+        e.cashier_name,
+        e.payment_type,
+        e.status,
+        i.name,
+        i.variant,
+        String(i.quantity),
+        i.unit_price.toFixed(2),
+        i.subtotal.toFixed(2),
+        e.total.toFixed(2),
+      ]);
+    }
+  }
+  return rows;
+}
+
 export function logToCsv(list: TxLogEntry[]): string {
   const esc = (v: unknown) => {
     const s = String(v ?? "");
@@ -148,4 +182,3 @@ export function logToCsv(list: TxLogEntry[]): string {
 }
 
 export { IDB_KEYS };
-

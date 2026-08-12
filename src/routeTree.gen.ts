@@ -27,7 +27,9 @@ import { Route as AuthenticatedManagerForecastRouteImport } from './routes/_auth
 import { Route as AuthenticatedManagerManualsRouteImport } from './routes/_authenticated/manager.manuals'
 import { Route as AuthenticatedManagerProductsRouteImport } from './routes/_authenticated/manager.products'
 import { Route as AuthenticatedManagerSalesRouteImport } from './routes/_authenticated/manager.sales'
+import { Route as AuthenticatedManagerSettingsRouteImport } from './routes/_authenticated/manager.settings'
 import { Route as AuthenticatedManagerStockRouteImport } from './routes/_authenticated/manager.stock'
+import { Route as AuthenticatedManagerStorageRouteImport } from './routes/_authenticated/manager.storage'
 import { Route as AuthenticatedManagerSuppliersRouteImport } from './routes/_authenticated/manager.suppliers'
 
 const IndexRoute = IndexRouteImport.update({
@@ -129,10 +131,22 @@ const AuthenticatedManagerSalesRoute =
     path: '/sales',
     getParentRoute: () => AuthenticatedManagerRoute,
   } as any)
+const AuthenticatedManagerSettingsRoute =
+  AuthenticatedManagerSettingsRouteImport.update({
+    id: '/settings',
+    path: '/settings',
+    getParentRoute: () => AuthenticatedManagerRoute,
+  } as any)
 const AuthenticatedManagerStockRoute =
   AuthenticatedManagerStockRouteImport.update({
     id: '/stock',
     path: '/stock',
+    getParentRoute: () => AuthenticatedManagerRoute,
+  } as any)
+const AuthenticatedManagerStorageRoute =
+  AuthenticatedManagerStorageRouteImport.update({
+    id: '/storage',
+    path: '/storage',
     getParentRoute: () => AuthenticatedManagerRoute,
   } as any)
 const AuthenticatedManagerSuppliersRoute =
@@ -159,7 +173,9 @@ export interface FileRoutesByFullPath {
   '/manager/manuals': typeof AuthenticatedManagerManualsRoute
   '/manager/products': typeof AuthenticatedManagerProductsRoute
   '/manager/sales': typeof AuthenticatedManagerSalesRoute
+  '/manager/settings': typeof AuthenticatedManagerSettingsRoute
   '/manager/stock': typeof AuthenticatedManagerStockRoute
+  '/manager/storage': typeof AuthenticatedManagerStorageRoute
   '/manager/suppliers': typeof AuthenticatedManagerSuppliersRoute
   '/manager/': typeof AuthenticatedManagerIndexRoute
 }
@@ -179,7 +195,9 @@ export interface FileRoutesByTo {
   '/manager/manuals': typeof AuthenticatedManagerManualsRoute
   '/manager/products': typeof AuthenticatedManagerProductsRoute
   '/manager/sales': typeof AuthenticatedManagerSalesRoute
+  '/manager/settings': typeof AuthenticatedManagerSettingsRoute
   '/manager/stock': typeof AuthenticatedManagerStockRoute
+  '/manager/storage': typeof AuthenticatedManagerStorageRoute
   '/manager/suppliers': typeof AuthenticatedManagerSuppliersRoute
   '/manager': typeof AuthenticatedManagerIndexRoute
 }
@@ -202,7 +220,9 @@ export interface FileRoutesById {
   '/_authenticated/manager/manuals': typeof AuthenticatedManagerManualsRoute
   '/_authenticated/manager/products': typeof AuthenticatedManagerProductsRoute
   '/_authenticated/manager/sales': typeof AuthenticatedManagerSalesRoute
+  '/_authenticated/manager/settings': typeof AuthenticatedManagerSettingsRoute
   '/_authenticated/manager/stock': typeof AuthenticatedManagerStockRoute
+  '/_authenticated/manager/storage': typeof AuthenticatedManagerStorageRoute
   '/_authenticated/manager/suppliers': typeof AuthenticatedManagerSuppliersRoute
   '/_authenticated/manager/': typeof AuthenticatedManagerIndexRoute
 }
@@ -225,7 +245,9 @@ export interface FileRouteTypes {
     | '/manager/manuals'
     | '/manager/products'
     | '/manager/sales'
+    | '/manager/settings'
     | '/manager/stock'
+    | '/manager/storage'
     | '/manager/suppliers'
     | '/manager/'
   fileRoutesByTo: FileRoutesByTo
@@ -245,7 +267,9 @@ export interface FileRouteTypes {
     | '/manager/manuals'
     | '/manager/products'
     | '/manager/sales'
+    | '/manager/settings'
     | '/manager/stock'
+    | '/manager/storage'
     | '/manager/suppliers'
     | '/manager'
   id:
@@ -267,7 +291,9 @@ export interface FileRouteTypes {
     | '/_authenticated/manager/manuals'
     | '/_authenticated/manager/products'
     | '/_authenticated/manager/sales'
+    | '/_authenticated/manager/settings'
     | '/_authenticated/manager/stock'
+    | '/_authenticated/manager/storage'
     | '/_authenticated/manager/suppliers'
     | '/_authenticated/manager/'
   fileRoutesById: FileRoutesById
@@ -406,11 +432,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedManagerSalesRouteImport
       parentRoute: typeof AuthenticatedManagerRoute
     }
+    '/_authenticated/manager/settings': {
+      id: '/_authenticated/manager/settings'
+      path: '/settings'
+      fullPath: '/manager/settings'
+      preLoaderRoute: typeof AuthenticatedManagerSettingsRouteImport
+      parentRoute: typeof AuthenticatedManagerRoute
+    }
     '/_authenticated/manager/stock': {
       id: '/_authenticated/manager/stock'
       path: '/stock'
       fullPath: '/manager/stock'
       preLoaderRoute: typeof AuthenticatedManagerStockRouteImport
+      parentRoute: typeof AuthenticatedManagerRoute
+    }
+    '/_authenticated/manager/storage': {
+      id: '/_authenticated/manager/storage'
+      path: '/storage'
+      fullPath: '/manager/storage'
+      preLoaderRoute: typeof AuthenticatedManagerStorageRouteImport
       parentRoute: typeof AuthenticatedManagerRoute
     }
     '/_authenticated/manager/suppliers': {
@@ -432,7 +472,9 @@ interface AuthenticatedManagerRouteChildren {
   AuthenticatedManagerManualsRoute: typeof AuthenticatedManagerManualsRoute
   AuthenticatedManagerProductsRoute: typeof AuthenticatedManagerProductsRoute
   AuthenticatedManagerSalesRoute: typeof AuthenticatedManagerSalesRoute
+  AuthenticatedManagerSettingsRoute: typeof AuthenticatedManagerSettingsRoute
   AuthenticatedManagerStockRoute: typeof AuthenticatedManagerStockRoute
+  AuthenticatedManagerStorageRoute: typeof AuthenticatedManagerStorageRoute
   AuthenticatedManagerSuppliersRoute: typeof AuthenticatedManagerSuppliersRoute
   AuthenticatedManagerIndexRoute: typeof AuthenticatedManagerIndexRoute
 }
@@ -446,7 +488,9 @@ const AuthenticatedManagerRouteChildren: AuthenticatedManagerRouteChildren = {
   AuthenticatedManagerManualsRoute: AuthenticatedManagerManualsRoute,
   AuthenticatedManagerProductsRoute: AuthenticatedManagerProductsRoute,
   AuthenticatedManagerSalesRoute: AuthenticatedManagerSalesRoute,
+  AuthenticatedManagerSettingsRoute: AuthenticatedManagerSettingsRoute,
   AuthenticatedManagerStockRoute: AuthenticatedManagerStockRoute,
+  AuthenticatedManagerStorageRoute: AuthenticatedManagerStorageRoute,
   AuthenticatedManagerSuppliersRoute: AuthenticatedManagerSuppliersRoute,
   AuthenticatedManagerIndexRoute: AuthenticatedManagerIndexRoute,
 }
