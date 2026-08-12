@@ -70,20 +70,22 @@ function notify() {
  * write - the caller surfaces a hard error to the cashier when both fail.
  */
 function persist(list: QueuedSale[]): Promise<boolean> {
-  // IndexedDB holds the full queue (up to 500 sales); localStorage keeps a
-  // small tail so a cold boot still shows pending work immediately.
+  // Both stores receive the bounded queue. localStorage is the synchronous
+  // commit path, so the cashier can safely move to the next sale immediately;
+  // IndexedDB then provides the larger, durable copy across reloads.
   list = list.slice(-MAX_QUEUE);
-  queueCache = list;
-  notify();
 
   let localOk = false;
   let localError: unknown = null;
   try {
-    window.localStorage.setItem(QUEUE_KEY, JSON.stringify(list.slice(-50)));
+    window.localStorage.setItem(QUEUE_KEY, JSON.stringify(list));
     localOk = true;
   } catch (e) {
     localError = e;
   }
+
+  queueCache = list;
+  notify();
 
   return idbSet(IDB_KEYS.sales, list)
     .then(() => true)
@@ -125,7 +127,10 @@ export function enqueueSale(
   const entry: QueuedSale = {
     ...sale,
     // Unique id + timestamp: the server dedupes on this id.
-    id: sale.id ?? crypto.randomUUID?.() ?? `${Date.now()}-${Math.random()}`,
+    id:
+      sale.id ??
+      globalThis.crypto?.randomUUID?.() ??
+      `${Date.now()}-${Math.random().toString(36).slice(2)}`,
     queued_at: new Date().toISOString(),
     status: "pending",
     attempts: 0,
@@ -149,7 +154,6 @@ export function isRetryable(s: QueuedSale): boolean {
   if (s.next_attempt_at && Date.now() < Date.parse(s.next_attempt_at)) return false;
   return true;
 }
-
 
 async function ensureSession(): Promise<string | null> {
   let { data } = await supabase.auth.getSession();
@@ -241,4 +245,3 @@ export async function flushQueue(): Promise<{ ok: number; failed: number; total:
   void persist(queueCache.filter((s) => !uploaded.has(s.id)));
   return { ok, failed: queueCache.length, total: list.length };
 }
-
