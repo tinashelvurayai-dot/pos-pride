@@ -71,6 +71,7 @@ const OFFLINE_CACHE_KEY = "tillpoint.cashier.catalog.v1";
 
 function CashierScreen() {
   const { profile, session, loading } = useAuth();
+  const offlineCashierId = "offline-cashier";
   const qc = useQueryClient();
   const online = useOnline();
   const [hideImages] = useHideImages();
@@ -92,7 +93,16 @@ function CashierScreen() {
 
   const variants = useQuery({
     queryKey: ["cashier", "variants"],
+    placeholderData: () => {
+      try {
+        const raw = localStorage.getItem(OFFLINE_CACHE_KEY);
+        return raw ? (JSON.parse(raw) as Variant[]) : undefined;
+      } catch {
+        return undefined;
+      }
+    },
     queryFn: async () => {
+      if (!online) throw new Error("Offline");
       const { data, error } = await supabase
         .from("product_variants")
         .select(
@@ -345,7 +355,7 @@ function CashierScreen() {
       // The till never waits for the cloud, so a sale can never hang on the network.
       const entry = enqueueSale({
         id: saleId,
-        cashier_id: session?.user.id ?? "",
+        cashier_id: session?.user.id ?? offlineCashierId,
         cashier_name: cashierName,
         total_amount: subtotal,
         payment_type: payment,
@@ -364,7 +374,7 @@ function CashierScreen() {
       recordSaleDelta(entry.id, items);
       setQueuedCount(getQueue().length);
 
-      return { entry: logEntry };
+      return Promise.resolve({ entry: logEntry });
     },
     onMutate: () => setCheckingOut(true),
     onSettled: () => setCheckingOut(false),
