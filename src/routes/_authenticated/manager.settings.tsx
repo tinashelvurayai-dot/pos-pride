@@ -20,6 +20,10 @@ type SettingsForm = {
   currency: string;
   taxRate: string;
   lowStockDefault: string;
+  managerName: string;
+  managerTitle: string;
+  cashierName: string;
+  cashierTitle: string;
 };
 
 const defaults: SettingsForm = {
@@ -27,6 +31,10 @@ const defaults: SettingsForm = {
   currency: "USD",
   taxRate: "0",
   lowStockDefault: "5",
+  managerName: "Mr Pride Tatire",
+  managerTitle: "Manager",
+  cashierName: "Cashier",
+  cashierTitle: "Cashier",
 };
 
 function readSettings(): SettingsForm {
@@ -126,6 +134,44 @@ function ManagerSettingsPage() {
               min="0"
               value={form.lowStockDefault}
               onChange={(e) => update("lowStockDefault", e.target.value)}
+            />
+          </div>
+          <div className="border-t border-border pt-4 sm:col-span-2">
+            <h2 className="font-semibold">Role identities</h2>
+            <p className="text-sm text-muted-foreground">
+              These names and titles appear across the manager and cashier workspaces.
+            </p>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="managerName">Manager name</Label>
+            <Input
+              id="managerName"
+              value={form.managerName}
+              onChange={(e) => update("managerName", e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="managerTitle">Manager title</Label>
+            <Input
+              id="managerTitle"
+              value={form.managerTitle}
+              onChange={(e) => update("managerTitle", e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="cashierName">Cashier name</Label>
+            <Input
+              id="cashierName"
+              value={form.cashierName}
+              onChange={(e) => update("cashierName", e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="cashierTitle">Cashier title</Label>
+            <Input
+              id="cashierTitle"
+              value={form.cashierTitle}
+              onChange={(e) => update("cashierTitle", e.target.value)}
             />
           </div>
         </div>

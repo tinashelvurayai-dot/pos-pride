@@ -28,7 +28,6 @@ import {
   Package as PackageIcon,
   BookOpen,
   ClipboardList,
-  HelpCircle,
   RefreshCw,
   CheckCircle2,
   AlertTriangle,
@@ -44,7 +43,6 @@ import { CASHIER_NAME, setMode } from "@/lib/session-mode";
 
 import { IDB_KEYS, idbGet, idbSet } from "@/lib/offline-db";
 import { SyncIndicator } from "@/components/sync-indicator";
-import { VoiceMicButton } from "@/components/voice-mic-button";
 import { PWAInstallButton } from "@/components/pwa-install-button";
 import { useHideImages } from "@/hooks/use-hide-images";
 
@@ -80,7 +78,6 @@ function CashierScreen() {
   const [payment, setPayment] = useState<"cash" | "mobile" | "other">("cash");
   const [checkingOut, setCheckingOut] = useState(false);
   const [manualOpen, setManualOpen] = useState(false);
-  const [voiceHelpOpen, setVoiceHelpOpen] = useState(false);
   const [queuedCount, setQueuedCount] = useState<number>(() => getQueue().length);
   const [syncStatus, setSyncStatus] = useState<SyncStatus>("idle");
   const [lastSync, setLastSync] = useState<string | null>(null);
@@ -426,7 +423,8 @@ function CashierScreen() {
               <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
                 Green Shop · Cashier
               </div>
-              <div className="text-sm font-semibold">{profile?.full_name}</div>
+              <div className="text-sm font-semibold">{profile?.full_name ?? "Cashier"}</div>
+              <div className="text-xs text-muted-foreground">Cashier</div>
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -441,10 +439,6 @@ function CashierScreen() {
                 className={`mr-2 h-4 w-4 ${syncStatus === "syncing" ? "animate-spin" : ""}`}
               />{" "}
               Sync
-            </Button>
-            <VoiceMicButton onFinalTranscript={handleVoice} label="Voice" />
-            <Button variant="outline" size="sm" onClick={() => setVoiceHelpOpen(true)}>
-              <HelpCircle className="mr-2 h-4 w-4" /> Voice help
             </Button>
             <PWAInstallButton variant="outline" size="sm" label="Install" />
             <Link to="/transactions">
@@ -734,14 +728,6 @@ function CashierScreen() {
             <DialogTitle>Cashier User Manual</DialogTitle>
           </DialogHeader>
           <CashierManualContent />
-        </DialogContent>
-      </Dialog>
-      <Dialog open={voiceHelpOpen} onOpenChange={setVoiceHelpOpen}>
-        <DialogContent className="max-w-xl">
-          <DialogHeader>
-            <DialogTitle>Voice commands</DialogTitle>
-          </DialogHeader>
-          <VoiceCommandHelp />
         </DialogContent>
       </Dialog>
       <Dialog
