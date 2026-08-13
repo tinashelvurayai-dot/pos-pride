@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Download, FileSpreadsheet, FileText, HardDrive, Trash2 } from "lucide-react";
@@ -39,6 +40,8 @@ function ManagerStoragePage() {
   const [entries, setEntries] = useState<TxLogEntry[]>([]);
   const [queue, setQueue] = useState<QueuedSale[]>([]);
   const [exported, setExported] = useState(false);
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
 
   useEffect(() => {
     const offLog = subscribeLog(setEntries);
@@ -50,7 +53,12 @@ function ManagerStoragePage() {
     };
   }, []);
 
-  const rows = logToRows(entries);
+  const filteredEntries = entries.filter(
+    (entry) =>
+      (!dateFrom || entry.created_at.slice(0, 10) >= dateFrom) &&
+      (!dateTo || entry.created_at.slice(0, 10) <= dateTo),
+  );
+  const rows = logToRows(filteredEntries);
   const pending = queue.length;
 
   function exportFile(format: "csv" | "xlsx" | "docx" | "pdf") {
@@ -145,6 +153,27 @@ function ManagerStoragePage() {
           Excel and Word exports open in compatible office applications. PDF uses the browser print
           dialog.
         </p>
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          <span className="text-sm font-medium">Date range</span>
+          <Input
+            type="date"
+            value={dateFrom}
+            onChange={(e) => {
+              setDateFrom(e.target.value);
+              setExported(false);
+            }}
+            aria-label="Export from date"
+          />
+          <Input
+            type="date"
+            value={dateTo}
+            onChange={(e) => {
+              setDateTo(e.target.value);
+              setExported(false);
+            }}
+            aria-label="Export to date"
+          />
+        </div>
         <div className="mt-5 flex flex-wrap gap-3">
           <Button variant="outline" onClick={() => exportFile("xlsx")}>
             <FileSpreadsheet className="mr-2 h-4 w-4" /> Excel

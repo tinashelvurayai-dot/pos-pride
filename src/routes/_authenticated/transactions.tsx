@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { isManagerMode } from "@/lib/session-mode";
+import { isManagerMode, setMode } from "@/lib/session-mode";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -45,11 +45,15 @@ function TransactionsPage() {
   const [query, setQuery] = useState("");
   const [paymentFilter, setPaymentFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [isManager, setIsManager] = useState(false);
 
   useEffect(() => {
     // Manager tools appear only when this device is actually in manager mode.
-    setIsManager(isManagerMode());
+    const manager = isManagerMode();
+    setIsManager(manager);
+    if (manager) setMode("manager");
     const off = subscribeLog(setEntries);
     void hydrateLogFromIdb();
     return off;
@@ -62,12 +66,14 @@ function TransactionsPage() {
       (e) =>
         (paymentFilter === "all" || e.payment_type === paymentFilter) &&
         (statusFilter === "all" || e.status === statusFilter) &&
+        (!dateFrom || e.created_at.slice(0, 10) >= dateFrom) &&
+        (!dateTo || e.created_at.slice(0, 10) <= dateTo) &&
         (e.cashier_name.toLowerCase().includes(q) ||
           e.payment_type.toLowerCase().includes(q) ||
           e.status.includes(q) ||
           e.items.some((i) => `${i.name} ${i.variant}`.toLowerCase().includes(q))),
     );
-  }, [entries, query]);
+  }, [entries, query, paymentFilter, statusFilter, dateFrom, dateTo]);
 
   const total = filtered.reduce((s, e) => s + e.total, 0);
   const queued = entries.filter((e) => e.status === "queued").length;
@@ -179,6 +185,18 @@ function TransactionsPage() {
             <option value="queued">Saved offline</option>
             <option value="failed">Failed</option>
           </select>
+          <Input
+            type="date"
+            value={dateFrom}
+            onChange={(e) => setDateFrom(e.target.value)}
+            aria-label="From date"
+          />
+          <Input
+            type="date"
+            value={dateTo}
+            onChange={(e) => setDateTo(e.target.value)}
+            aria-label="To date"
+          />
           {isManager && (
             <>
               <Button variant="outline" size="sm" onClick={copyAll}>

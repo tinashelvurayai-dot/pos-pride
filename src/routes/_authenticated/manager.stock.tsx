@@ -96,7 +96,17 @@ function StockPage() {
   });
 
   const addStock = useMutation({
-    mutationFn: async ({ id, current, add }: { id: string; current: number; add: number }) => {
+    mutationFn: async ({
+      id,
+      current,
+      add,
+      buyingPrice,
+    }: {
+      id: string;
+      current: number;
+      add: number;
+      buyingPrice: number;
+    }) => {
       const { error } = await supabase
         .from("stock")
         .update({ quantity: current + add })
@@ -104,7 +114,13 @@ function StockPage() {
       if (error) throw error;
       await supabase.from("audit_logs").insert({
         action: "stock_in",
-        details: { stock_id: id, quantity: add, reason: "Manual stock-in" },
+        details: {
+          stock_id: id,
+          quantity: add,
+          buying_price: buyingPrice,
+          product_name: "Stock received",
+          reason: "Manual stock-in",
+        },
       });
     },
     onSuccess: () => {
@@ -345,8 +361,14 @@ function StockPage() {
                 e.preventDefault();
                 const fd = new FormData(e.currentTarget);
                 const add = parseInt(String(fd.get("add") ?? "0"), 10) || 0;
+                const buyingPrice = parseFloat(String(fd.get("buyingPrice") ?? "0")) || 0;
                 if (add > 0)
-                  addStock.mutate({ id: addStockFor.id, current: addStockFor.quantity, add });
+                  addStock.mutate({
+                    id: addStockFor.id,
+                    current: addStockFor.quantity,
+                    add,
+                    buyingPrice,
+                  });
               }}
               className="space-y-4"
             >
@@ -356,13 +378,17 @@ function StockPage() {
               </div>
               <div className="space-y-2">
                 <Label>Units brought in</Label>
+                <Input name="add" type="number" min="1" required autoFocus placeholder="e.g. 10" />
+              </div>
+              <div className="space-y-2">
+                <Label>Total buying price</Label>
                 <Input
-                  name="add"
+                  name="buyingPrice"
                   type="number"
-                  min="1"
+                  min="0"
+                  step="0.01"
                   required
-                  autoFocus
-                  placeholder="e.g. 10 units of Sugar (Huletts)"
+                  placeholder="e.g. 45.00"
                 />
               </div>
               <DialogFooter>

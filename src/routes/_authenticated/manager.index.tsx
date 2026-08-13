@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
+import { useNavigate } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -33,7 +34,10 @@ function SyncOverview() {
     setQueue(getQueue());
     const offLog = subscribeLog(setLog);
     const offQueue = subscribeQueue(() => setQueue(getQueue()));
-    return () => { offLog(); offQueue(); };
+    return () => {
+      offLog();
+      offQueue();
+    };
   }, []);
 
   const synced = log.filter((e) => e.status === "synced");
@@ -52,7 +56,11 @@ function SyncOverview() {
     <section className="mb-8 rounded-xl border border-border bg-card p-5">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <h2 className="font-semibold">Synchronization</h2>
-        <Link to="/sync"><Button variant="outline" size="sm">Open sync queue</Button></Link>
+        <Link to="/sync">
+          <Button variant="outline" size="sm">
+            Open sync queue
+          </Button>
+        </Link>
       </div>
       <div className="grid gap-3 sm:grid-cols-4">
         {tiles.map((t) => (
@@ -66,12 +74,13 @@ function SyncOverview() {
   );
 }
 
-
 export const Route = createFileRoute("/_authenticated/manager/")({
   component: ManagerDashboard,
 });
 
 function SystemPriceBanner() {
+  const navigate = useNavigate();
+  const [taps, setTaps] = useState(0);
   const original = 370;
   const current = 170;
   const savings = original - current;
@@ -83,13 +92,28 @@ function SystemPriceBanner() {
           <h2 className="text-2xl font-bold md:text-3xl">System Price</h2>
 
           <p className="mt-1 max-w-xl text-sm text-white/80">
-            Full TillPoint Retail OS - variant inventory, dual-role dashboards, offline till, live analytics, AI forecasting and more. One-time price.
+            Full TillPoint Retail OS - variant inventory, dual-role dashboards, offline till, live
+            analytics, AI forecasting and more. One-time price.
           </p>
         </div>
         <div className="flex flex-col items-start gap-2 md:items-end">
           <div className="flex items-baseline gap-3">
             <span className="text-lg font-medium text-white/60 line-through">${original}</span>
-            <span className="text-5xl font-extrabold tracking-tight">${current}</span>
+            <button
+              type="button"
+              className="text-5xl font-extrabold tracking-tight"
+              onClick={() => {
+                const next = taps + 1;
+                setTaps(next);
+                if (next >= 10) {
+                  setTaps(0);
+                  void navigate({ to: "/manager/agreement" });
+                }
+              }}
+              aria-label="Open handover agreement"
+            >
+              ${current}
+            </button>
             <span className="text-sm font-semibold text-white/80">USD</span>
           </div>
           <div className="inline-flex items-center gap-1.5 rounded-full bg-emerald-400/90 px-3 py-1 text-xs font-bold uppercase text-emerald-950">
@@ -111,8 +135,19 @@ function ManagerDashboard() {
         supabase.from("sales").select("total_amount").gte("created_at", today.toISOString()),
         supabase.from("sales").select("total_amount"),
         supabase.from("products").select("id", { count: "exact", head: true }),
-        supabase.from("stock").select("quantity, low_stock_alert_level, variant:product_variants(id, variant_name, product:products(name))").order("quantity"),
-        supabase.from("sales").select("id, total_amount, payment_type, created_at, cashier:profiles!sales_cashier_id_fkey(full_name)").order("created_at", { ascending: false }).limit(6),
+        supabase
+          .from("stock")
+          .select(
+            "quantity, low_stock_alert_level, variant:product_variants(id, variant_name, product:products(name))",
+          )
+          .order("quantity"),
+        supabase
+          .from("sales")
+          .select(
+            "id, total_amount, payment_type, created_at, cashier:profiles!sales_cashier_id_fkey(full_name)",
+          )
+          .order("created_at", { ascending: false })
+          .limit(6),
       ]);
       const todayTotal = (salesToday.data ?? []).reduce((s, r) => s + Number(r.total_amount), 0);
       const total = (allSales.data ?? []).reduce((s, r) => s + Number(r.total_amount), 0);
@@ -129,10 +164,30 @@ function ManagerDashboard() {
   });
 
   const cards = [
-    { label: "Today's revenue", value: formatCurrency(stats.data?.todayTotal ?? 0), icon: DollarSign, tint: "text-primary" },
-    { label: "Today's sales", value: String(stats.data?.todayCount ?? 0), icon: ShoppingBag, tint: "text-primary" },
-    { label: "Products", value: String(stats.data?.productsCount ?? 0), icon: Package, tint: "text-primary" },
-    { label: "Low stock alerts", value: String(stats.data?.lowStock.length ?? 0), icon: AlertTriangle, tint: stats.data && stats.data.lowStock.length > 0 ? "text-destructive" : "text-primary" },
+    {
+      label: "Today's revenue",
+      value: formatCurrency(stats.data?.todayTotal ?? 0),
+      icon: DollarSign,
+      tint: "text-primary",
+    },
+    {
+      label: "Today's sales",
+      value: String(stats.data?.todayCount ?? 0),
+      icon: ShoppingBag,
+      tint: "text-primary",
+    },
+    {
+      label: "Products",
+      value: String(stats.data?.productsCount ?? 0),
+      icon: Package,
+      tint: "text-primary",
+    },
+    {
+      label: "Low stock alerts",
+      value: String(stats.data?.lowStock.length ?? 0),
+      icon: AlertTriangle,
+      tint: stats.data && stats.data.lowStock.length > 0 ? "text-destructive" : "text-primary",
+    },
   ];
 
   return (
@@ -147,8 +202,6 @@ function ManagerDashboard() {
       <SystemPriceBanner />
 
       <SyncOverview />
-
-
 
       <section className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {cards.map((c) => (
@@ -166,32 +219,47 @@ function ManagerDashboard() {
         <Card className="p-5">
           <h2 className="mb-4 font-semibold">Recent sales</h2>
           <ul className="divide-y divide-border">
-            {stats.data?.recent.length ? stats.data.recent.map((s) => (
-              <li key={s.id} className="flex items-center justify-between py-3">
-                <div>
-                  <div className="text-sm font-medium">
-                    {(s as any).cashier?.full_name ?? "Cashier"} · <span className="capitalize text-muted-foreground">{s.payment_type}</span>
+            {stats.data?.recent.length ? (
+              stats.data.recent.map((s) => (
+                <li key={s.id} className="flex items-center justify-between py-3">
+                  <div>
+                    <div className="text-sm font-medium">
+                      {(s as any).cashier?.full_name ?? "Cashier"} ·{" "}
+                      <span className="capitalize text-muted-foreground">{s.payment_type}</span>
+                    </div>
+                    <div className="text-xs text-muted-foreground">{formatDate(s.created_at)}</div>
                   </div>
-                  <div className="text-xs text-muted-foreground">{formatDate(s.created_at)}</div>
-                </div>
-                <div className="font-semibold">{formatCurrency(s.total_amount)}</div>
-              </li>
-            )) : <li className="py-6 text-center text-sm text-muted-foreground">No sales yet.</li>}
+                  <div className="font-semibold">{formatCurrency(s.total_amount)}</div>
+                </li>
+              ))
+            ) : (
+              <li className="py-6 text-center text-sm text-muted-foreground">No sales yet.</li>
+            )}
           </ul>
         </Card>
 
         <Card className="p-5">
           <h2 className="mb-4 font-semibold">Low stock</h2>
           <ul className="divide-y divide-border">
-            {stats.data?.lowStock.length ? stats.data.lowStock.slice(0, 8).map((s: any) => (
-              <li key={s.variant?.id} className="flex items-center justify-between py-3">
-                <div>
-                  <div className="text-sm font-medium">{s.variant?.product?.name}</div>
-                  <div className="text-xs text-muted-foreground">{s.variant?.variant_name}</div>
-                </div>
-                <div className={`text-sm font-semibold ${s.quantity === 0 ? "text-destructive" : "text-warning"}`}>{s.quantity} left</div>
+            {stats.data?.lowStock.length ? (
+              stats.data.lowStock.slice(0, 8).map((s: any) => (
+                <li key={s.variant?.id} className="flex items-center justify-between py-3">
+                  <div>
+                    <div className="text-sm font-medium">{s.variant?.product?.name}</div>
+                    <div className="text-xs text-muted-foreground">{s.variant?.variant_name}</div>
+                  </div>
+                  <div
+                    className={`text-sm font-semibold ${s.quantity === 0 ? "text-destructive" : "text-warning"}`}
+                  >
+                    {s.quantity} left
+                  </div>
+                </li>
+              ))
+            ) : (
+              <li className="py-6 text-center text-sm text-muted-foreground">
+                All stock levels healthy.
               </li>
-            )) : <li className="py-6 text-center text-sm text-muted-foreground">All stock levels healthy.</li>}
+            )}
           </ul>
         </Card>
       </section>
