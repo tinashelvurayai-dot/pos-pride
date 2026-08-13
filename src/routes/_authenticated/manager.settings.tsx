@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { Progress } from "@/components/ui/progress";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -52,6 +53,12 @@ function ManagerSettingsPage() {
   const { profile } = useAuth();
   const [form, setForm] = useState<SettingsForm>(defaults);
   const [saving, setSaving] = useState(false);
+  const [storage, setStorage] = useState({ usage: 0, quota: 0 });
+  useEffect(() => {
+    void navigator.storage
+      ?.estimate()
+      .then(({ usage = 0, quota = 0 }) => setStorage({ usage, quota }));
+  }, []);
 
   useEffect(() => setForm(readSettings()), []);
 
@@ -69,6 +76,9 @@ function ManagerSettingsPage() {
     setSaving(true);
     try {
       localStorage.setItem(SETTINGS_KEY, JSON.stringify(form));
+      window.dispatchEvent(
+        new StorageEvent("storage", { key: SETTINGS_KEY, newValue: JSON.stringify(form) }),
+      );
       if (profile?.id) {
         await supabase
           .from("profiles")
@@ -96,6 +106,21 @@ function ManagerSettingsPage() {
           </p>
         </div>
       </header>
+      <Card className="mb-6 max-w-2xl p-6">
+        <h2 className="font-semibold">Online database storage monitor</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          This device&apos;s cached application storage used for offline checkout.
+        </p>
+        <Progress
+          className="mt-4"
+          value={storage.quota ? Math.min(100, (storage.usage / storage.quota) * 100) : 0}
+        />
+        <div className="mt-2 text-xs text-muted-foreground">
+          {storage.quota
+            ? `${(storage.usage / 1048576).toFixed(1)} MB used of ${(storage.quota / 1048576).toFixed(1)} MB available`
+            : "Storage estimate unavailable"}
+        </div>
+      </Card>
       <Card className="max-w-2xl p-6">
         <div className="grid gap-5 sm:grid-cols-2">
           <div className="space-y-2 sm:col-span-2">

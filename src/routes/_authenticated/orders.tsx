@@ -9,9 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { BrandLogo } from "@/components/brand-logo";
 import { SignOutButton } from "@/components/sign-out-button";
-import { ClipboardList, Plus, Check, Trash2, ArrowLeft, HelpCircle } from "lucide-react";
-import { VoiceMicButton } from "@/components/voice-mic-button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ClipboardList, Plus, Check, Trash2, ArrowLeft } from "lucide-react";
 import { formatDate } from "@/lib/format";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -21,7 +19,11 @@ export const Route = createFileRoute("/_authenticated/orders")({
 });
 
 // Parses "2x 1kg Salt Red Seal" -> { quantity: 2, unit: "1kg", product_name: "Salt Red Seal" }
-function parseEntry(raw: string): { quantity: number | null; unit: string | null; product_name: string } {
+function parseEntry(raw: string): {
+  quantity: number | null;
+  unit: string | null;
+  product_name: string;
+} {
   const trimmed = raw.trim();
   // Try "Nx UNIT PRODUCT" or "N UNIT PRODUCT" or "Nx PRODUCT"
   const m = trimmed.match(/^(\d+)\s*x?\s+(\S+)?\s*(.+)?$/i);
@@ -30,7 +32,8 @@ function parseEntry(raw: string): { quantity: number | null; unit: string | null
   const rest = (m[3] ?? "").trim();
   // If m[2] looks like a unit (contains digits or common suffix), keep it separate
   const maybeUnit = m[2] ?? "";
-  const isUnit = /\d/.test(maybeUnit) || /^(kg|g|ml|l|lt|pcs|pack|packs|box|boxes)$/i.test(maybeUnit);
+  const isUnit =
+    /\d/.test(maybeUnit) || /^(kg|g|ml|l|lt|pcs|pack|packs|box|boxes)$/i.test(maybeUnit);
   return {
     quantity,
     unit: isUnit ? maybeUnit : null,
@@ -43,14 +46,15 @@ function OrdersPage() {
   const { session, role } = useAuth();
   const [entry, setEntry] = useState("");
   const [notes, setNotes] = useState("");
-  const [voiceHelpOpen, setVoiceHelpOpen] = useState(false);
 
   const orders = useQuery({
     queryKey: ["restock-orders"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("restock_orders")
-        .select("id, entry, quantity, unit, product_name, status, requested_at, fulfilled_at, notes, requested_by")
+        .select(
+          "id, entry, quantity, unit, product_name, status, requested_at, fulfilled_at, notes, requested_by",
+        )
         .order("requested_at", { ascending: false })
         .limit(100);
       if (error) throw error;
@@ -74,7 +78,8 @@ function OrdersPage() {
     },
     onSuccess: () => {
       toast.success("Added to orders");
-      setEntry(""); setNotes("");
+      setEntry("");
+      setNotes("");
       qc.invalidateQueries({ queryKey: ["restock-orders"] });
     },
     onError: (e: Error) => toast.error(e.message),
@@ -82,7 +87,10 @@ function OrdersPage() {
 
   const fulfill = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("restock_orders").update({ status: "fulfilled", fulfilled_at: new Date().toISOString() }).eq("id", id);
+      const { error } = await supabase
+        .from("restock_orders")
+        .update({ status: "fulfilled", fulfilled_at: new Date().toISOString() })
+        .eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["restock-orders"] }),
@@ -107,13 +115,17 @@ function OrdersPage() {
         <div className="flex items-center gap-3">
           <BrandLogo />
           <div className="hidden sm:block border-l border-blue-100 pl-3">
-            <div className="text-xs font-medium uppercase tracking-wider text-blue-700">Restock Orders</div>
+            <div className="text-xs font-medium uppercase tracking-wider text-blue-700">
+              Restock Orders
+            </div>
             <div className="text-sm text-muted-foreground">Items that have run out</div>
           </div>
         </div>
         <div className="flex items-center gap-2">
           <Link to={backTo}>
-            <Button variant="outline" size="sm"><ArrowLeft className="mr-2 h-4 w-4" /> Back</Button>
+            <Button variant="outline" size="sm">
+              <ArrowLeft className="mr-2 h-4 w-4" /> Back
+            </Button>
           </Link>
           <SignOutButton variant="outline" />
         </div>
@@ -126,7 +138,9 @@ function OrdersPage() {
             <h2 className="font-semibold">Add an item that has run out</h2>
           </div>
           <p className="mb-3 text-xs text-muted-foreground">
-            Use the format: <span className="font-mono font-semibold text-blue-700">2x 1kg Salt Red Seal</span>. The system parses quantity, unit, and product name automatically and timestamps the entry.
+            Use the format:{" "}
+            <span className="font-mono font-semibold text-blue-700">2x 1kg Salt Red Seal</span>. The
+            system parses quantity, unit, and product name automatically and timestamps the entry.
           </p>
           <div className="grid gap-2 sm:grid-cols-[1fr_auto_auto_auto]">
             <Input
@@ -136,28 +150,24 @@ function OrdersPage() {
               onKeyDown={(e) => e.key === "Enter" && !add.isPending && add.mutate()}
               className="text-base"
             />
-            <VoiceMicButton
-              onFinalTranscript={(t) => {
-                // Normalise spoken numbers ("two" -> "2") minimally and prefix "x" separator
-                const cleaned = t.replace(/\bby\b/gi, "x").replace(/\s+/g, " ").trim();
-                setEntry(cleaned);
-              }}
-              label="Dictate"
-            />
-            <Button type="button" variant="outline" onClick={() => setVoiceHelpOpen(true)}>
-              <HelpCircle className="mr-1 h-4 w-4" /> Help
-            </Button>
             <Button onClick={() => add.mutate()} disabled={add.isPending}>
               <Plus className="mr-1 h-4 w-4" /> Add
             </Button>
           </div>
-          <Textarea placeholder="Optional notes (supplier, urgency, etc.)" value={notes} onChange={(e) => setNotes(e.target.value)} className="mt-2" />
+          <Textarea
+            placeholder="Optional notes (supplier, urgency, etc.)"
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            className="mt-2"
+          />
         </Card>
 
         <Card className="border-blue-100 p-5">
           <div className="mb-4 flex items-center justify-between">
             <h2 className="font-semibold">Pending ({pending.length})</h2>
-            <Badge variant="outline" className="border-blue-300 text-blue-700">Live</Badge>
+            <Badge variant="outline" className="border-blue-300 text-blue-700">
+              Live
+            </Badge>
           </div>
           <ul className="divide-y divide-blue-100">
             {pending.map((o) => (
@@ -165,16 +175,29 @@ function OrdersPage() {
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
                     {o.quantity && <Badge className="bg-blue-600 text-white">{o.quantity}x</Badge>}
-                    {o.unit && <Badge variant="outline" className="border-blue-300 text-blue-700">{o.unit}</Badge>}
+                    {o.unit && (
+                      <Badge variant="outline" className="border-blue-300 text-blue-700">
+                        {o.unit}
+                      </Badge>
+                    )}
                     <span className="truncate font-medium">{o.product_name || o.entry}</span>
                   </div>
-                  <div className="mt-1 text-xs text-muted-foreground">Added {formatDate(o.requested_at)}</div>
-                  {o.notes && <div className="mt-1 text-xs italic text-muted-foreground">{o.notes}</div>}
+                  <div className="mt-1 text-xs text-muted-foreground">
+                    Added {formatDate(o.requested_at)}
+                  </div>
+                  {o.notes && (
+                    <div className="mt-1 text-xs italic text-muted-foreground">{o.notes}</div>
+                  )}
                 </div>
                 <div className="flex flex-shrink-0 items-center gap-1">
                   {role === "manager" && (
                     <>
-                      <Button size="icon" variant="ghost" onClick={() => fulfill.mutate(o.id)} title="Mark fulfilled">
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => fulfill.mutate(o.id)}
+                        title="Mark fulfilled"
+                      >
                         <Check className="h-4 w-4 text-emerald-600" />
                       </Button>
                       <Button size="icon" variant="ghost" onClick={() => del.mutate(o.id)}>
@@ -185,7 +208,11 @@ function OrdersPage() {
                 </div>
               </li>
             ))}
-            {pending.length === 0 && <li className="py-6 text-center text-sm text-muted-foreground">Nothing pending. Everything's in stock.</li>}
+            {pending.length === 0 && (
+              <li className="py-6 text-center text-sm text-muted-foreground">
+                Nothing pending. Everything's in stock.
+              </li>
+            )}
           </ul>
         </Card>
 
@@ -194,31 +221,20 @@ function OrdersPage() {
             <h2 className="mb-4 font-semibold text-muted-foreground">Fulfilled ({done.length})</h2>
             <ul className="divide-y divide-blue-100">
               {done.slice(0, 20).map((o) => (
-                <li key={o.id} className="flex items-center justify-between gap-3 py-2 text-sm text-muted-foreground">
+                <li
+                  key={o.id}
+                  className="flex items-center justify-between gap-3 py-2 text-sm text-muted-foreground"
+                >
                   <span className="truncate line-through">{o.entry}</span>
-                  <span className="text-xs">{o.fulfilled_at ? formatDate(o.fulfilled_at) : ""}</span>
+                  <span className="text-xs">
+                    {o.fulfilled_at ? formatDate(o.fulfilled_at) : ""}
+                  </span>
                 </li>
               ))}
             </ul>
           </Card>
         )}
       </div>
-      <Dialog open={voiceHelpOpen} onOpenChange={setVoiceHelpOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader><DialogTitle>Orders voice help</DialogTitle></DialogHeader>
-          <div className="space-y-3 text-sm">
-            <p className="text-muted-foreground">Tap Dictate and speak the restock item in the same format you would type.</p>
-            <div className="grid gap-2">
-              {["2x 1kg Salt Red Seal", "3x 500ml Coke", "1 box candles"].map((example) => (
-                <div key={example} className="rounded-lg border border-blue-100 bg-blue-50/50 p-3">
-                  <code className="font-semibold text-blue-800">{example}</code>
-                </div>
-              ))}
-            </div>
-            <p className="text-muted-foreground">If speech recognition writes "by", the system converts it to "x" automatically.</p>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

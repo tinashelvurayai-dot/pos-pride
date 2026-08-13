@@ -19,16 +19,17 @@ import { Route as AuthenticatedShiftRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedSyncRouteImport } from './routes/_authenticated/sync'
 import { Route as AuthenticatedTransactionsRouteImport } from './routes/_authenticated/transactions'
 import { Route as AuthenticatedManagerIndexRouteImport } from './routes/_authenticated/manager.index'
+import { Route as AuthenticatedManagerAgreementRouteImport } from './routes/_authenticated/manager.agreement'
 import { Route as AuthenticatedManagerAlertsRouteImport } from './routes/_authenticated/manager.alerts'
 import { Route as AuthenticatedManagerCashRouteImport } from './routes/_authenticated/manager.cash'
 import { Route as AuthenticatedManagerCashiersRouteImport } from './routes/_authenticated/manager.cashiers'
 import { Route as AuthenticatedManagerExpensesRouteImport } from './routes/_authenticated/manager.expenses'
-import { Route as AuthenticatedManagerForecastRouteImport } from './routes/_authenticated/manager.forecast'
 import { Route as AuthenticatedManagerManualsRouteImport } from './routes/_authenticated/manager.manuals'
 import { Route as AuthenticatedManagerProductsRouteImport } from './routes/_authenticated/manager.products'
 import { Route as AuthenticatedManagerSalesRouteImport } from './routes/_authenticated/manager.sales'
 import { Route as AuthenticatedManagerSettingsRouteImport } from './routes/_authenticated/manager.settings'
 import { Route as AuthenticatedManagerStockRouteImport } from './routes/_authenticated/manager.stock'
+import { Route as AuthenticatedManagerStockInRouteImport } from './routes/_authenticated/manager.stock-in'
 import { Route as AuthenticatedManagerStorageRouteImport } from './routes/_authenticated/manager.storage'
 import { Route as AuthenticatedManagerSuppliersRouteImport } from './routes/_authenticated/manager.suppliers'
 
@@ -83,6 +84,12 @@ const AuthenticatedManagerIndexRoute =
     path: '/',
     getParentRoute: () => AuthenticatedManagerRoute,
   } as any)
+const AuthenticatedManagerAgreementRoute =
+  AuthenticatedManagerAgreementRouteImport.update({
+    id: '/agreement',
+    path: '/agreement',
+    getParentRoute: () => AuthenticatedManagerRoute,
+  } as any)
 const AuthenticatedManagerAlertsRoute =
   AuthenticatedManagerAlertsRouteImport.update({
     id: '/alerts',
@@ -105,12 +112,6 @@ const AuthenticatedManagerExpensesRoute =
   AuthenticatedManagerExpensesRouteImport.update({
     id: '/expenses',
     path: '/expenses',
-    getParentRoute: () => AuthenticatedManagerRoute,
-  } as any)
-const AuthenticatedManagerForecastRoute =
-  AuthenticatedManagerForecastRouteImport.update({
-    id: '/forecast',
-    path: '/forecast',
     getParentRoute: () => AuthenticatedManagerRoute,
   } as any)
 const AuthenticatedManagerManualsRoute =
@@ -143,6 +144,12 @@ const AuthenticatedManagerStockRoute =
     path: '/stock',
     getParentRoute: () => AuthenticatedManagerRoute,
   } as any)
+const AuthenticatedManagerStockInRoute =
+  AuthenticatedManagerStockInRouteImport.update({
+    id: '/stock-in',
+    path: '/stock-in',
+    getParentRoute: () => AuthenticatedManagerRoute,
+  } as any)
 const AuthenticatedManagerStorageRoute =
   AuthenticatedManagerStorageRouteImport.update({
     id: '/storage',
@@ -165,16 +172,17 @@ export interface FileRoutesByFullPath {
   '/shift': typeof AuthenticatedShiftRoute
   '/sync': typeof AuthenticatedSyncRoute
   '/transactions': typeof AuthenticatedTransactionsRoute
+  '/manager/agreement': typeof AuthenticatedManagerAgreementRoute
   '/manager/alerts': typeof AuthenticatedManagerAlertsRoute
   '/manager/cash': typeof AuthenticatedManagerCashRoute
   '/manager/cashiers': typeof AuthenticatedManagerCashiersRoute
   '/manager/expenses': typeof AuthenticatedManagerExpensesRoute
-  '/manager/forecast': typeof AuthenticatedManagerForecastRoute
   '/manager/manuals': typeof AuthenticatedManagerManualsRoute
   '/manager/products': typeof AuthenticatedManagerProductsRoute
   '/manager/sales': typeof AuthenticatedManagerSalesRoute
   '/manager/settings': typeof AuthenticatedManagerSettingsRoute
   '/manager/stock': typeof AuthenticatedManagerStockRoute
+  '/manager/stock-in': typeof AuthenticatedManagerStockInRoute
   '/manager/storage': typeof AuthenticatedManagerStorageRoute
   '/manager/suppliers': typeof AuthenticatedManagerSuppliersRoute
   '/manager/': typeof AuthenticatedManagerIndexRoute
@@ -187,16 +195,17 @@ export interface FileRoutesByTo {
   '/shift': typeof AuthenticatedShiftRoute
   '/sync': typeof AuthenticatedSyncRoute
   '/transactions': typeof AuthenticatedTransactionsRoute
+  '/manager/agreement': typeof AuthenticatedManagerAgreementRoute
   '/manager/alerts': typeof AuthenticatedManagerAlertsRoute
   '/manager/cash': typeof AuthenticatedManagerCashRoute
   '/manager/cashiers': typeof AuthenticatedManagerCashiersRoute
   '/manager/expenses': typeof AuthenticatedManagerExpensesRoute
-  '/manager/forecast': typeof AuthenticatedManagerForecastRoute
   '/manager/manuals': typeof AuthenticatedManagerManualsRoute
   '/manager/products': typeof AuthenticatedManagerProductsRoute
   '/manager/sales': typeof AuthenticatedManagerSalesRoute
   '/manager/settings': typeof AuthenticatedManagerSettingsRoute
   '/manager/stock': typeof AuthenticatedManagerStockRoute
+  '/manager/stock-in': typeof AuthenticatedManagerStockInRoute
   '/manager/storage': typeof AuthenticatedManagerStorageRoute
   '/manager/suppliers': typeof AuthenticatedManagerSuppliersRoute
   '/manager': typeof AuthenticatedManagerIndexRoute
@@ -212,16 +221,17 @@ export interface FileRoutesById {
   '/_authenticated/shift': typeof AuthenticatedShiftRoute
   '/_authenticated/sync': typeof AuthenticatedSyncRoute
   '/_authenticated/transactions': typeof AuthenticatedTransactionsRoute
+  '/_authenticated/manager/agreement': typeof AuthenticatedManagerAgreementRoute
   '/_authenticated/manager/alerts': typeof AuthenticatedManagerAlertsRoute
   '/_authenticated/manager/cash': typeof AuthenticatedManagerCashRoute
   '/_authenticated/manager/cashiers': typeof AuthenticatedManagerCashiersRoute
   '/_authenticated/manager/expenses': typeof AuthenticatedManagerExpensesRoute
-  '/_authenticated/manager/forecast': typeof AuthenticatedManagerForecastRoute
   '/_authenticated/manager/manuals': typeof AuthenticatedManagerManualsRoute
   '/_authenticated/manager/products': typeof AuthenticatedManagerProductsRoute
   '/_authenticated/manager/sales': typeof AuthenticatedManagerSalesRoute
   '/_authenticated/manager/settings': typeof AuthenticatedManagerSettingsRoute
   '/_authenticated/manager/stock': typeof AuthenticatedManagerStockRoute
+  '/_authenticated/manager/stock-in': typeof AuthenticatedManagerStockInRoute
   '/_authenticated/manager/storage': typeof AuthenticatedManagerStorageRoute
   '/_authenticated/manager/suppliers': typeof AuthenticatedManagerSuppliersRoute
   '/_authenticated/manager/': typeof AuthenticatedManagerIndexRoute
@@ -237,16 +247,17 @@ export interface FileRouteTypes {
     | '/shift'
     | '/sync'
     | '/transactions'
+    | '/manager/agreement'
     | '/manager/alerts'
     | '/manager/cash'
     | '/manager/cashiers'
     | '/manager/expenses'
-    | '/manager/forecast'
     | '/manager/manuals'
     | '/manager/products'
     | '/manager/sales'
     | '/manager/settings'
     | '/manager/stock'
+    | '/manager/stock-in'
     | '/manager/storage'
     | '/manager/suppliers'
     | '/manager/'
@@ -259,16 +270,17 @@ export interface FileRouteTypes {
     | '/shift'
     | '/sync'
     | '/transactions'
+    | '/manager/agreement'
     | '/manager/alerts'
     | '/manager/cash'
     | '/manager/cashiers'
     | '/manager/expenses'
-    | '/manager/forecast'
     | '/manager/manuals'
     | '/manager/products'
     | '/manager/sales'
     | '/manager/settings'
     | '/manager/stock'
+    | '/manager/stock-in'
     | '/manager/storage'
     | '/manager/suppliers'
     | '/manager'
@@ -283,16 +295,17 @@ export interface FileRouteTypes {
     | '/_authenticated/shift'
     | '/_authenticated/sync'
     | '/_authenticated/transactions'
+    | '/_authenticated/manager/agreement'
     | '/_authenticated/manager/alerts'
     | '/_authenticated/manager/cash'
     | '/_authenticated/manager/cashiers'
     | '/_authenticated/manager/expenses'
-    | '/_authenticated/manager/forecast'
     | '/_authenticated/manager/manuals'
     | '/_authenticated/manager/products'
     | '/_authenticated/manager/sales'
     | '/_authenticated/manager/settings'
     | '/_authenticated/manager/stock'
+    | '/_authenticated/manager/stock-in'
     | '/_authenticated/manager/storage'
     | '/_authenticated/manager/suppliers'
     | '/_authenticated/manager/'
@@ -376,6 +389,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedManagerIndexRouteImport
       parentRoute: typeof AuthenticatedManagerRoute
     }
+    '/_authenticated/manager/agreement': {
+      id: '/_authenticated/manager/agreement'
+      path: '/agreement'
+      fullPath: '/manager/agreement'
+      preLoaderRoute: typeof AuthenticatedManagerAgreementRouteImport
+      parentRoute: typeof AuthenticatedManagerRoute
+    }
     '/_authenticated/manager/alerts': {
       id: '/_authenticated/manager/alerts'
       path: '/alerts'
@@ -402,13 +422,6 @@ declare module '@tanstack/react-router' {
       path: '/expenses'
       fullPath: '/manager/expenses'
       preLoaderRoute: typeof AuthenticatedManagerExpensesRouteImport
-      parentRoute: typeof AuthenticatedManagerRoute
-    }
-    '/_authenticated/manager/forecast': {
-      id: '/_authenticated/manager/forecast'
-      path: '/forecast'
-      fullPath: '/manager/forecast'
-      preLoaderRoute: typeof AuthenticatedManagerForecastRouteImport
       parentRoute: typeof AuthenticatedManagerRoute
     }
     '/_authenticated/manager/manuals': {
@@ -446,6 +459,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedManagerStockRouteImport
       parentRoute: typeof AuthenticatedManagerRoute
     }
+    '/_authenticated/manager/stock-in': {
+      id: '/_authenticated/manager/stock-in'
+      path: '/stock-in'
+      fullPath: '/manager/stock-in'
+      preLoaderRoute: typeof AuthenticatedManagerStockInRouteImport
+      parentRoute: typeof AuthenticatedManagerRoute
+    }
     '/_authenticated/manager/storage': {
       id: '/_authenticated/manager/storage'
       path: '/storage'
@@ -464,32 +484,34 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedManagerRouteChildren {
+  AuthenticatedManagerAgreementRoute: typeof AuthenticatedManagerAgreementRoute
   AuthenticatedManagerAlertsRoute: typeof AuthenticatedManagerAlertsRoute
   AuthenticatedManagerCashRoute: typeof AuthenticatedManagerCashRoute
   AuthenticatedManagerCashiersRoute: typeof AuthenticatedManagerCashiersRoute
   AuthenticatedManagerExpensesRoute: typeof AuthenticatedManagerExpensesRoute
-  AuthenticatedManagerForecastRoute: typeof AuthenticatedManagerForecastRoute
   AuthenticatedManagerManualsRoute: typeof AuthenticatedManagerManualsRoute
   AuthenticatedManagerProductsRoute: typeof AuthenticatedManagerProductsRoute
   AuthenticatedManagerSalesRoute: typeof AuthenticatedManagerSalesRoute
   AuthenticatedManagerSettingsRoute: typeof AuthenticatedManagerSettingsRoute
   AuthenticatedManagerStockRoute: typeof AuthenticatedManagerStockRoute
+  AuthenticatedManagerStockInRoute: typeof AuthenticatedManagerStockInRoute
   AuthenticatedManagerStorageRoute: typeof AuthenticatedManagerStorageRoute
   AuthenticatedManagerSuppliersRoute: typeof AuthenticatedManagerSuppliersRoute
   AuthenticatedManagerIndexRoute: typeof AuthenticatedManagerIndexRoute
 }
 
 const AuthenticatedManagerRouteChildren: AuthenticatedManagerRouteChildren = {
+  AuthenticatedManagerAgreementRoute: AuthenticatedManagerAgreementRoute,
   AuthenticatedManagerAlertsRoute: AuthenticatedManagerAlertsRoute,
   AuthenticatedManagerCashRoute: AuthenticatedManagerCashRoute,
   AuthenticatedManagerCashiersRoute: AuthenticatedManagerCashiersRoute,
   AuthenticatedManagerExpensesRoute: AuthenticatedManagerExpensesRoute,
-  AuthenticatedManagerForecastRoute: AuthenticatedManagerForecastRoute,
   AuthenticatedManagerManualsRoute: AuthenticatedManagerManualsRoute,
   AuthenticatedManagerProductsRoute: AuthenticatedManagerProductsRoute,
   AuthenticatedManagerSalesRoute: AuthenticatedManagerSalesRoute,
   AuthenticatedManagerSettingsRoute: AuthenticatedManagerSettingsRoute,
   AuthenticatedManagerStockRoute: AuthenticatedManagerStockRoute,
+  AuthenticatedManagerStockInRoute: AuthenticatedManagerStockInRoute,
   AuthenticatedManagerStorageRoute: AuthenticatedManagerStorageRoute,
   AuthenticatedManagerSuppliersRoute: AuthenticatedManagerSuppliersRoute,
   AuthenticatedManagerIndexRoute: AuthenticatedManagerIndexRoute,

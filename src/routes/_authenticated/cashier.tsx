@@ -87,6 +87,26 @@ function CashierScreen() {
     amountPaid: number;
     change: number;
   } | null>(null);
+  const [roleIdentity, setRoleIdentity] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem("tillpoint.manager.settings.v1") ?? "{}");
+    } catch {
+      return {};
+    }
+  });
+
+  useEffect(() => {
+    const onSettings = (event: StorageEvent) => {
+      if (event.key !== "tillpoint.manager.settings.v1") return;
+      try {
+        setRoleIdentity(JSON.parse(event.newValue ?? "{}"));
+      } catch {
+        /* noop */
+      }
+    };
+    window.addEventListener("storage", onSettings);
+    return () => window.removeEventListener("storage", onSettings);
+  }, []);
 
   const variants = useQuery({
     queryKey: ["cashier", "variants"],
@@ -423,8 +443,12 @@ function CashierScreen() {
               <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
                 Green Shop · Cashier
               </div>
-              <div className="text-sm font-semibold">{profile?.full_name ?? "Cashier"}</div>
-              <div className="text-xs text-muted-foreground">Cashier</div>
+              <div className="text-sm font-semibold">
+                {roleIdentity.cashierName ?? profile?.full_name ?? "Cashier"}
+              </div>
+              <div className="text-xs text-muted-foreground">
+                {roleIdentity.cashierTitle ?? "Cashier"}
+              </div>
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
