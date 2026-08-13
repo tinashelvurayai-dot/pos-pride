@@ -17,7 +17,6 @@ import {
   TrendingUp,
   Truck,
   ClipboardList,
-  Sparkles,
   AlertTriangle,
   RefreshCw,
   Lock as LockIcon,
@@ -45,7 +44,6 @@ const navItems: Array<{
   { to: "/manager/cash", label: "Daily Cash", icon: Wallet },
   { to: "/manager/expenses", label: "Expenses & Profit", icon: TrendingUp },
   { to: "/manager/suppliers", label: "Suppliers & PO", icon: Truck },
-  { to: "/manager/forecast", label: "AI Forecast", icon: Sparkles },
   { to: "/transactions", label: "Transaction Log", icon: ClipboardList },
   { to: "/sync", label: "Sync Queue", icon: RefreshCw },
   { to: "/shift", label: "Shift Close (Z)", icon: LockIcon },
@@ -101,7 +99,9 @@ function ManagerLayout() {
       </nav>
       <div className="border-t border-slate-300/60 p-4">
         <div className="mb-3 text-sm">
-          <div className="font-medium text-slate-900">{profile?.full_name}</div>
+          <div className="font-medium text-slate-900">
+            {profile?.full_name ?? "Mr Pride Tatire"}
+          </div>
           <div className="text-xs text-slate-500">Manager</div>
         </div>
         <SignOutButton variant="outline" />
