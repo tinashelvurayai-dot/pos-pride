@@ -126,6 +126,22 @@ function SystemPriceBanner() {
 }
 
 function ManagerDashboard() {
+  const [shopName, setShopName] = useState("Green Shop");
+  useEffect(() => {
+    const read = () => {
+      try {
+        setShopName(
+          (JSON.parse(localStorage.getItem("tillpoint.manager.settings.v1") ?? "{}")
+            .shopName as string) || "Green Shop",
+        );
+      } catch {
+        /* noop */
+      }
+    };
+    read();
+    window.addEventListener("storage", read);
+    return () => window.removeEventListener("storage", read);
+  }, []);
   const stats = useQuery({
     queryKey: ["manager", "dashboard"],
     queryFn: async () => {
@@ -193,7 +209,7 @@ function ManagerDashboard() {
   return (
     <div className="p-6 md:p-10">
       <header className="mb-8">
-        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+        <h1 className="text-3xl font-bold tracking-tight">{shopName} Dashboard</h1>
         <p className="mt-1 text-sm text-muted-foreground">Live snapshot of your shop.</p>
       </header>
 

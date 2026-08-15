@@ -11,7 +11,8 @@ import { BrandLogo } from "@/components/brand-logo";
 import { SignOutButton } from "@/components/sign-out-button";
 import { ClipboardList, Plus, Check, Trash2, ArrowLeft } from "lucide-react";
 import { formatDate } from "@/lib/format";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { setMode } from "@/lib/session-mode";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/orders")({
@@ -42,6 +43,9 @@ function parseEntry(raw: string): {
 }
 
 function OrdersPage() {
+  useEffect(() => {
+    setMode("manager");
+  }, []);
   const qc = useQueryClient();
   const { session, role } = useAuth();
   const [entry, setEntry] = useState("");
