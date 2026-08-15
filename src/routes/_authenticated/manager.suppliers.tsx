@@ -23,7 +23,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { formatCurrency, formatDate } from "@/lib/format";
-import { Truck, Plus, Trash2, PackageCheck, Zap } from "lucide-react";
+import { Truck, Plus, Trash2, PackageCheck, Pencil } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -37,6 +37,7 @@ function SuppliersPage() {
   const qc = useQueryClient();
   const { session } = useAuth();
   const [supplierOpen, setSupplierOpen] = useState(false);
+  const [editingSupplier, setEditingSupplier] = useState<any | null>(null);
   const [supForm, setSupForm] = useState({
     name: "",
     contact_name: "",
@@ -44,11 +45,9 @@ function SuppliersPage() {
     email: "",
     address: "",
     notes: "",
+    products_offered: "",
   });
   const [poOpen, setPoOpen] = useState(false);
-  const [autoReorderEnabled, setAutoReorderEnabled] = useState(
-    () => localStorage.getItem("tillpoint.auto-reorder.v1") === "true",
-  );
   const [poForm, setPoForm] = useState<{
     supplier_id: string;
     notes: string;
@@ -83,29 +82,55 @@ function SuppliersPage() {
     },
   });
 
-  const lowStock = useQuery({
-    queryKey: ["low-stock-auto"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("stock")
-        .select(
-          "quantity, low_stock_alert_level, variant:product_variants(id, variant_name, price, product:products(name))",
-        );
-      if (error) throw error;
-      return (data ?? []).filter((s) => s.quantity <= s.low_stock_alert_level);
-    },
-  });
-
   const addSupplier = useMutation({
     mutationFn: async () => {
       if (!supForm.name.trim()) throw new Error("Supplier name required");
-      const { error } = await supabase.from("suppliers").insert(supForm);
+      const { products_offered, ...supplier } = supForm;
+      const notes = [
+        supplier.notes,
+        products_offered ? `Products and prices offered:\n${products_offered}` : "",
+      ]
+        .filter(Boolean)
+        .join("\n\n");
+      const { error } = await supabase.from("suppliers").insert({ ...supplier, notes });
       if (error) throw error;
     },
     onSuccess: () => {
       toast.success("Supplier added");
       setSupplierOpen(false);
-      setSupForm({ name: "", contact_name: "", phone: "", email: "", address: "", notes: "" });
+      setSupForm({
+        name: "",
+        contact_name: "",
+        phone: "",
+        email: "",
+        address: "",
+        notes: "",
+        products_offered: "",
+      });
+      qc.invalidateQueries({ queryKey: ["suppliers"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const updateSupplier = useMutation({
+    mutationFn: async () => {
+      const { products_offered, ...supplier } = supForm;
+      const notes = [
+        supplier.notes,
+        products_offered ? `Products and prices offered:\n${products_offered}` : "",
+      ]
+        .filter(Boolean)
+        .join("\n\n");
+      const { error } = await supabase
+        .from("suppliers")
+        .update({ ...supplier, notes })
+        .eq("id", editingSupplier.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Supplier updated");
+      setEditingSupplier(null);
+      setSupplierOpen(false);
       qc.invalidateQueries({ queryKey: ["suppliers"] });
     },
     onError: (e: Error) => toast.error(e.message),
@@ -153,29 +178,6 @@ function SuppliersPage() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["purchase-orders"] }),
   });
 
-  function autoReorderFromLowStock() {
-    if (!suppliers.data?.length) {
-      toast.error("Add a supplier first");
-      return;
-    }
-    const items: POItem[] = (lowStock.data ?? []).slice(0, 10).map((s: any) => ({
-      name: `${s.variant?.product?.name ?? ""} - ${s.variant?.variant_name ?? ""}`.trim(),
-      quantity: Math.max(10, s.low_stock_alert_level * 2),
-      unit_cost: Number(s.variant?.price ?? 0) * 0.7,
-    }));
-    if (items.length === 0) {
-      toast.info("No low-stock items to auto-reorder");
-      return;
-    }
-    setPoForm({
-      supplier_id: suppliers.data[0].id,
-      notes: "Auto-generated from low-stock alerts",
-      auto_reorder: true,
-      items,
-    });
-    setPoOpen(true);
-  }
-
   return (
     <div className="p-6 md:p-10">
       <header className="mb-8 flex flex-wrap items-start justify-between gap-4">
@@ -186,23 +188,6 @@ function SuppliersPage() {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button
-            variant={autoReorderEnabled ? "default" : "outline"}
-            onClick={() => {
-              const next = !autoReorderEnabled;
-              setAutoReorderEnabled(next);
-              localStorage.setItem("tillpoint.auto-reorder.v1", String(next));
-              toast.success(
-                next ? "Auto-reorder enabled for this device." : "Auto-reorder disabled.",
-              );
-            }}
-          >
-            <Zap className="mr-2 h-4 w-4" />{" "}
-            {autoReorderEnabled ? "Auto-reorder on" : "Enable auto-reorder"}
-          </Button>
-          <Button variant="outline" onClick={autoReorderFromLowStock}>
-            <Zap className="mr-2 h-4 w-4" /> Auto-reorder low stock
-          </Button>
           <Button variant="outline" onClick={() => setSupplierOpen(true)}>
             <Plus className="mr-2 h-4 w-4" /> Add supplier
           </Button>
@@ -220,7 +205,29 @@ function SuppliersPage() {
           <ul className="divide-y divide-blue-100">
             {(suppliers.data ?? []).map((s) => (
               <li key={s.id} className="py-3">
-                <div className="font-medium">{s.name}</div>
+                <div className="flex items-center justify-between gap-2">
+                  <div className="font-medium">{s.name}</div>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    onClick={() => {
+                      setEditingSupplier(s);
+                      setSupForm({
+                        name: s.name ?? "",
+                        contact_name: s.contact_name ?? "",
+                        phone: s.phone ?? "",
+                        email: s.email ?? "",
+                        address: s.address ?? "",
+                        notes: s.notes ?? "",
+                        products_offered: "",
+                      });
+                      setSupplierOpen(true);
+                    }}
+                    aria-label={`Edit ${s.name}`}
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                </div>
                 <div className="text-xs text-muted-foreground">
                   {s.contact_name} {s.phone && `· ${s.phone}`}
                 </div>
@@ -293,7 +300,7 @@ function SuppliersPage() {
       <Dialog open={supplierOpen} onOpenChange={setSupplierOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Add supplier</DialogTitle>
+            <DialogTitle>{editingSupplier ? "Edit supplier" : "Add supplier"}</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
             <div>
@@ -334,6 +341,14 @@ function SuppliersPage() {
               />
             </div>
             <div>
+              <Label>Products and prices offered</Label>
+              <Textarea
+                placeholder="e.g. Sugar — $2.70/kg\nRice — $5/5kg"
+                value={supForm.products_offered}
+                onChange={(e) => setSupForm({ ...supForm, products_offered: e.target.value })}
+              />
+            </div>
+            <div>
               <Label>Notes</Label>
               <Textarea
                 value={supForm.notes}
@@ -345,7 +360,10 @@ function SuppliersPage() {
             <Button variant="outline" onClick={() => setSupplierOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={() => addSupplier.mutate()} disabled={addSupplier.isPending}>
+            <Button
+              onClick={() => (editingSupplier ? updateSupplier.mutate() : addSupplier.mutate())}
+              disabled={addSupplier.isPending || updateSupplier.isPending}
+            >
               Save
             </Button>
           </DialogFooter>
