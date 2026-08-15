@@ -40,7 +40,11 @@ export function setMode(mode: Exclude<TillMode, null>) {
     /* noop */
   }
   for (const fn of listeners) {
-    try { fn(mode); } catch { /* noop */ }
+    try {
+      fn(mode);
+    } catch {
+      /* noop */
+    }
   }
 }
 
@@ -49,9 +53,15 @@ export function clearMode() {
     localStorage.removeItem(MODE_KEY);
     localStorage.removeItem("manager_unlock");
     localStorage.removeItem("cashier_unlock");
-  } catch { /* noop */ }
+  } catch {
+    /* noop */
+  }
   for (const fn of listeners) {
-    try { fn(null); } catch { /* noop */ }
+    try {
+      fn(null);
+    } catch {
+      /* noop */
+    }
   }
 }
 

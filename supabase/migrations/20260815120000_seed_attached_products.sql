@@ -85,7 +85,9 @@ BEGIN
       ELSE
         UPDATE public.product_variants SET price = (variant->>1)::numeric WHERE id = variant_id;
       END IF;
-      UPDATE public.stock SET quantity = 40 WHERE variant_id = variant_id;
+      INSERT INTO public.stock (variant_id, quantity, low_stock_alert_level)
+      VALUES (variant_id, 40, 10)
+      ON CONFLICT (variant_id) DO UPDATE SET quantity = 40;
     END LOOP;
   END LOOP;
   UPDATE public.stock SET quantity = 40;
