@@ -245,3 +245,13 @@ export async function flushQueue(): Promise<{ ok: number; failed: number; total:
   void persist(queueCache.filter((s) => !uploaded.has(s.id)));
   return { ok, failed: queueCache.length, total: list.length };
 }
+
+/** Sales parked as failed - surfaced as a persistent banner in the app. */
+export function failedSales(): QueuedSale[] {
+  return queueCache.filter((s) => s.status === "failed");
+}
+
+/** Wipe every queued sale from this device (used by Transaction Reset). */
+export function clearQueue(): Promise<boolean> {
+  return persist([]);
+}
