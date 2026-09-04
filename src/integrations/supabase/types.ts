@@ -16,18 +16,21 @@ export type Database = {
     Tables: {
       app_settings: {
         Row: {
+          auto_approve_refunds: boolean
           id: boolean
           show_cashier_manual: boolean
           updated_at: string
           updated_by: string | null
         }
         Insert: {
+          auto_approve_refunds?: boolean
           id?: boolean
           show_cashier_manual?: boolean
           updated_at?: string
           updated_by?: string | null
         }
         Update: {
+          auto_approve_refunds?: boolean
           id?: boolean
           show_cashier_manual?: boolean
           updated_at?: string
@@ -56,6 +59,36 @@ export type Database = {
           details?: Json | null
           id?: string
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      cashier_accounts: {
+        Row: {
+          active: boolean
+          code1: string
+          created_at: string
+          id: string
+          name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          active?: boolean
+          code1: string
+          created_at?: string
+          id?: string
+          name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          active?: boolean
+          code1?: string
+          created_at?: string
+          id?: string
+          name?: string
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -288,6 +321,102 @@ export type Database = {
           },
         ]
       }
+      refund_items: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          quantity: number
+          refund_id: string
+          sale_item_id: string
+          unit_price: number
+          variant_id: string
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          id?: string
+          quantity: number
+          refund_id: string
+          sale_item_id: string
+          unit_price?: number
+          variant_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          quantity?: number
+          refund_id?: string
+          sale_item_id?: string
+          unit_price?: number
+          variant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "refund_items_refund_id_fkey"
+            columns: ["refund_id"]
+            isOneToOne: false
+            referencedRelation: "refunds"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "refund_items_sale_item_id_fkey"
+            columns: ["sale_item_id"]
+            isOneToOne: false
+            referencedRelation: "sale_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "refund_items_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "product_variants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      refunds: {
+        Row: {
+          amount: number
+          created_at: string
+          created_by: string | null
+          id: string
+          kind: string
+          reason: string | null
+          restocked: boolean
+          sale_id: string
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          kind?: string
+          reason?: string | null
+          restocked?: boolean
+          sale_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          kind?: string
+          reason?: string | null
+          restocked?: boolean
+          sale_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "refunds_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "sales"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       restock_orders: {
         Row: {
           created_at: string
@@ -446,6 +575,70 @@ export type Database = {
           },
         ]
       }
+      stock_in_records: {
+        Row: {
+          created_at: string
+          id: string
+          notes: string | null
+          quantity: number
+          received_at: string
+          recorded_by: string | null
+          stock_id: string
+          supplier_id: string | null
+          total_cost: number
+          unit_buying_price: number
+          variant_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          notes?: string | null
+          quantity: number
+          received_at?: string
+          recorded_by?: string | null
+          stock_id: string
+          supplier_id?: string | null
+          total_cost?: number
+          unit_buying_price?: number
+          variant_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          notes?: string | null
+          quantity?: number
+          received_at?: string
+          recorded_by?: string | null
+          stock_id?: string
+          supplier_id?: string | null
+          total_cost?: number
+          unit_buying_price?: number
+          variant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_in_records_stock_id_fkey"
+            columns: ["stock_id"]
+            isOneToOne: false
+            referencedRelation: "stock"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_in_records_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_in_records_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "product_variants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       suppliers: {
         Row: {
           active: boolean
@@ -524,6 +717,25 @@ export type Database = {
         Args: { _variant_id: string }
         Returns: undefined
       }
+      refund_sale: {
+        Args: {
+          p_kind?: string
+          p_reason?: string
+          p_restock?: boolean
+          p_sale_id: string
+        }
+        Returns: string
+      }
+      refund_sale_items: {
+        Args: {
+          p_items?: Json
+          p_kind?: string
+          p_reason?: string
+          p_restock?: boolean
+          p_sale_id: string
+        }
+        Returns: string
+      }
     }
     Enums: {
       app_role: "manager" | "cashier"
@@ -544,12 +756,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -573,11 +785,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -598,11 +810,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -623,11 +835,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -640,11 +852,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }

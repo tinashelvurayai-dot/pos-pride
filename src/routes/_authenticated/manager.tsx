@@ -22,9 +22,12 @@ import {
   Lock as LockIcon,
   HardDrive,
   Settings,
+  Undo2,
+  ScrollText,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { isManagerMode } from "@/lib/session-mode";
+import { SyncAlertBanner } from "@/components/sync-alert-banner";
 
 export const Route = createFileRoute("/_authenticated/manager")({
   component: ManagerLayout,
@@ -42,6 +45,8 @@ const navItems: Array<{
   { to: "/manager/stock-in", label: "Stock-In Records", icon: ClipboardList },
   { to: "/manager/alerts", label: "Low Stock Alerts", icon: AlertTriangle },
   { to: "/manager/sales", label: "Sales", icon: Receipt },
+  { to: "/manager/refunds", label: "Refunds & Voids", icon: Undo2 },
+  { to: "/manager/profit", label: "Profit View", icon: TrendingUp },
   { to: "/manager/cash", label: "Daily Cash", icon: Wallet },
   { to: "/manager/expenses", label: "Expenses & Profit", icon: TrendingUp },
   { to: "/manager/suppliers", label: "Suppliers & PO", icon: Truck },
@@ -52,6 +57,7 @@ const navItems: Array<{
 
   { to: "/manager/storage", label: "Storage & Exports", icon: HardDrive },
   { to: "/manager/settings", label: "Settings", icon: Settings },
+  { to: "/manager/logs", label: "Reset Logs", icon: ScrollText },
   { to: "/manager/manuals", label: "Manuals", icon: BookOpen },
 ];
 
@@ -113,7 +119,7 @@ function ManagerLayout() {
   return (
     <div className="flex min-h-screen bg-background">
       {/* Desktop sidebar */}
-      <aside className="hidden w-64 flex-col border-r border-slate-300/60 bg-gradient-to-b from-slate-100 to-blue-50 md:flex">
+      <aside className="sticky top-0 hidden h-screen w-64 flex-col overflow-y-auto overscroll-contain border-r border-slate-300/60 bg-gradient-to-b from-slate-100 to-blue-50 md:flex">
         {SidebarInner}
       </aside>
 
@@ -129,7 +135,7 @@ function ManagerLayout() {
       {mobileOpen && (
         <div className="fixed inset-0 z-40 md:hidden">
           <div className="absolute inset-0 bg-black/40" onClick={() => setMobileOpen(false)} />
-          <aside className="absolute left-0 top-0 flex h-full w-72 flex-col bg-gradient-to-b from-slate-100 to-blue-50 shadow-xl">
+          <aside className="absolute left-0 top-0 flex h-full w-72 flex-col overflow-y-auto overscroll-contain bg-gradient-to-b from-slate-100 to-blue-50 shadow-xl">
             <div className="flex justify-end p-2">
               <Button variant="ghost" size="icon" onClick={() => setMobileOpen(false)}>
                 <X className="h-5 w-5" />
@@ -141,6 +147,7 @@ function ManagerLayout() {
       )}
 
       <main className="flex-1 overflow-auto pt-14 md:pt-0">
+        <SyncAlertBanner />
         <Outlet />
       </main>
     </div>

@@ -78,3 +78,8 @@ export function pendingDeltas(): Record<string, number> {
 export function localQuantity(variantId: string, serverQuantity: number): number {
   return serverQuantity - (pendingDeltas()[variantId] ?? 0);
 }
+
+/** Drop every pending offline stock delta (used by Transaction Reset). */
+export function clearAllDeltas() {
+  persist({});
+}
